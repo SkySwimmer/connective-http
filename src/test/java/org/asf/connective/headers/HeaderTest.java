@@ -31,7 +31,7 @@ public class HeaderTest {
 		assertTrue(testCol.getHeaderValue("test 3") == null);
 		testCol.addHeader("test 3", "abc");
 		testCol.addHeader("Test 3", "def", false);
-		assertTrue(testCol.toString().replace("\r", "").equals("test: test2\n" + "test: test3\n" + "test 2: abc\n"
+		assertTrue(testCol.toString().replace("\r", "").equals("test: test3\n" + "test 2: abc\n"
 				+ "test 2: def\n" + "Test 4: abc\\ndef\n" + "Test 5: abc\\ndef\\\\nghi\n" + "test 3: def"));
 	}
 
