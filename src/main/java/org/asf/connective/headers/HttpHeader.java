@@ -150,8 +150,8 @@ public class HttpHeader {
 	 * @param values Values to add
 	 * @return Value index
 	 */
-	public void addValues(Collection<? extends String> value) {
-		values.addAll(values);
+	public void addValues(Collection<? extends String> values) {
+		this.values.addAll(values);
 	}
 
 	/**
