@@ -63,6 +63,7 @@ public class ConnectiveServerTest {
 	@Test
 	public void keepAliveConnectionTest() throws IOException {
 		NetworkedConnectiveHttpServer testServer = ConnectiveHttpServer.createNetworked("HTTP/1.1");
+		testServer.setListenPort(12345);
 		testServer.start();
 		testServer.registerProcessor(new TestProc());
 
@@ -153,6 +154,7 @@ public class ConnectiveServerTest {
 	@Test
 	public void getTest() throws IOException {
 		NetworkedConnectiveHttpServer testServer = ConnectiveHttpServer.createNetworked("HTTP/1.1");
+		testServer.setListenPort(12345);
 		testServer.start();
 		testServer.registerProcessor(new TestProc());
 
@@ -169,6 +171,7 @@ public class ConnectiveServerTest {
 	@Test
 	public void malformedTest() throws IOException {
 		NetworkedConnectiveHttpServer testServer = ConnectiveHttpServer.createNetworked("HTTP/1.1");
+		testServer.setListenPort(12345);
 		testServer.start();
 		testServer.registerProcessor(new TestProc());
 
@@ -185,6 +188,7 @@ public class ConnectiveServerTest {
 	@Test
 	public void postTest() throws IOException {
 		NetworkedConnectiveHttpServer testServer = ConnectiveHttpServer.createNetworked("HTTP/1.1");
+		testServer.setListenPort(12345);
 		testServer.registerProcessor(new TestProc());
 		String str = genText();
 		testServer.start();
