@@ -1,0 +1,45 @@
+plugins {
+    id 'java'
+}
+
+apply plugin: 'eclipse'
+
+sourceCompatibility = '1.11'
+targetCompatibility = '1.11'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.1'
+	testImplementation group: 'javax.activation', name: 'activation', version: '1.1.1'
+	implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.17.2'
+	implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.17.2'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+task javaDocs(type: Javadoc) {
+	classpath = sourceSets.main.runtimeClasspath
+	source = sourceSets.main.allJava
+}
+
+task javadocJar(type: Jar, dependsOn: 'javaDocs') {
+	from javadoc
+	classifier = 'javadoc'
+	exclude "**/extra/**"
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+	classifier = 'sources'
+	from sourceSets.main.allSource
+	exclude "**/extra/**"
+}
+
+artifacts {
+	archives javadocJar
+	archives sourcesJar
+}

@@ -1,0 +1,3 @@
+rootProject.name = 'connective-http'
+include("connective-basicfile")
+include("connective-standalone")
