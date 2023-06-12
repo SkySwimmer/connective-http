@@ -148,7 +148,6 @@ public class HttpHeader {
 	 * Adds values to the header
 	 * 
 	 * @param values Values to add
-	 * @return Value index
 	 */
 	public void addValues(Collection<? extends String> values) {
 		this.values.addAll(values);

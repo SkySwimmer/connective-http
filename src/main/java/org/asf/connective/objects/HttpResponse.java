@@ -125,8 +125,8 @@ public class HttpResponse extends HttpObject {
 	/**
 	 * Sets the body of the response
 	 * 
-	 * @param type Content type.
-	 * @param body Input bytes.
+	 * @param type Content type
+	 * @param body Input bytes
 	 */
 	public HttpResponse setContent(String type, byte[] body) {
 		// Assign headers
@@ -159,8 +159,7 @@ public class HttpResponse extends HttpObject {
 	 * Sets the body of the response, WARNING: the stream gets closed when the
 	 * response is sent.
 	 * 
-	 * @param body   Input stream.
-	 * @param length Content length.
+	 * @param body   Input stream
 	 */
 	public HttpResponse setContent(byte[] body) {
 		// Assign headers
@@ -190,9 +189,9 @@ public class HttpResponse extends HttpObject {
 	 * Sets the body of the response, WARNING: the stream gets closed when the
 	 * response is sent.
 	 * 
-	 * @param type   Content type.
-	 * @param body   Input stream.
-	 * @param length Content length.
+	 * @param type   Content type
+	 * @param body   Input stream
+	 * @param length Content length
 	 */
 	public HttpResponse setContent(String type, InputStream body, long length) {
 		// Assign headers
