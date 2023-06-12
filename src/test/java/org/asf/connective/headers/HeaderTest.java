@@ -14,8 +14,7 @@ public class HeaderTest {
 		testCol.addHeader("test", "test2");
 		testCol.addHeader("test", "test3");
 		testCol.addHeader("test 2", "abc");
-		testCol.addHeader("Test 2", "def");
-		testCol.addHeader("test 2", "abc");
+		testCol.addHeader("Test 2", "def", true);
 		testCol.addHeader("test 3", "abc");
 		testCol.addHeader("Test 3", "def", false);
 		testCol.addHeader("Test 4", "abc\ndef");
