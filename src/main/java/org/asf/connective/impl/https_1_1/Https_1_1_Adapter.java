@@ -49,13 +49,13 @@ public class Https_1_1_Adapter implements IServerAdapterDefinition {
 				// Find password
 				char[] password = null;
 				if (configuration.containsKey("KeystorePassword"))
-					password = configuration.get("KeyStorePassword").toCharArray();
+					password = configuration.get("KeystorePassword").toCharArray();
 				else if (configuration.containsKey("Keystore-Password"))
-					password = configuration.get("KeyStore-Password").toCharArray();
+					password = configuration.get("Keystore-Password").toCharArray();
 				else if (configuration.containsKey("Keystore-password"))
-					password = configuration.get("KeyStore-password").toCharArray();
+					password = configuration.get("Keystore-password").toCharArray();
 				else if (configuration.containsKey("keystore-password"))
-					password = configuration.get("keyStore-password").toCharArray();
+					password = configuration.get("keystore-password").toCharArray();
 
 				// If still no password, find by file
 				String path = configuration.get("Keystore");
@@ -76,13 +76,13 @@ public class Https_1_1_Adapter implements IServerAdapterDefinition {
 				// Find password
 				char[] password = null;
 				if (configuration.containsKey("KeystorePassword"))
-					password = configuration.get("KeyStorePassword").toCharArray();
+					password = configuration.get("KeystorePassword").toCharArray();
 				else if (configuration.containsKey("Keystore-Password"))
-					password = configuration.get("KeyStore-Password").toCharArray();
+					password = configuration.get("Keystore-Password").toCharArray();
 				else if (configuration.containsKey("Keystore-password"))
-					password = configuration.get("KeyStore-password").toCharArray();
+					password = configuration.get("Keystore-password").toCharArray();
 				else if (configuration.containsKey("keystore-password"))
-					password = configuration.get("keyStore-password").toCharArray();
+					password = configuration.get("keystore-password").toCharArray();
 
 				// If still no password, find by file
 				String path = configuration.get("keystore");
