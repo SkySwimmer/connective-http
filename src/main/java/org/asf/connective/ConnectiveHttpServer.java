@@ -39,6 +39,14 @@ public abstract class ConnectiveHttpServer {
 	protected ArrayList<HttpRequestProcessor> reqProcessors = new ArrayList<HttpRequestProcessor>();
 	protected ArrayList<HttpPushProcessor> pushProcessors = new ArrayList<HttpPushProcessor>();
 
+	public HttpRequestProcessor[] getRequestProcessors() {
+		return reqProcessors.toArray(t -> new HttpRequestProcessor[t]);
+	}
+
+	public HttpPushProcessor[] getPushProcessors() {
+		return pushProcessors.toArray(t -> new HttpPushProcessor[t]);
+	}
+
 	private static ArrayList<IServerAdapterDefinition> adapters = new ArrayList<IServerAdapterDefinition>(
 			List.of(new Http_1_1_Adapter(), new Https_1_1_Adapter()));
 
