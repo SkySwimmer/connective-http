@@ -50,47 +50,57 @@ public abstract class RemoteClient {
 	public void processRequest(HttpRequest request) throws IOException {
 		// Prepare response
 		HttpResponse resp = createResponse(request);
-
-		// Set error if needed
-		if (!server.getContentSource().process(request.getRequestPath(), request, resp, this, server)) {
-			if (!request.getRequestMethod().equals("GET") && !request.getRequestMethod().equals("PUT")
-					&& !request.getRequestMethod().equals("DELETE") && !request.getRequestMethod().equals("PATCH")
-					&& !request.getRequestMethod().equals("POST") && !request.getRequestMethod().equals("HEAD")) {
-				resp.setResponseStatus(405, "Unsupported request");
-				logger.error(resp.getHttpVersion() + " " + request.getRequestMethod() + " "
-						+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
-						+ resp.getResponseMessage() + " [" + getRemoteAddress() + "]");
+		try {
+			// Set error if needed
+			if (!server.getContentSource().process(request.getRequestPath(), request, resp, this, server)) {
+				if (!request.getRequestMethod().equals("GET") && !request.getRequestMethod().equals("PUT")
+						&& !request.getRequestMethod().equals("DELETE") && !request.getRequestMethod().equals("PATCH")
+						&& !request.getRequestMethod().equals("POST") && !request.getRequestMethod().equals("HEAD")) {
+					resp.setResponseStatus(405, "Unsupported request");
+					logger.error(resp.getHttpVersion() + " " + request.getRequestMethod() + " "
+							+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
+							+ resp.getResponseMessage() + " [" + getRemoteAddress() + "]");
+				} else {
+					resp.setResponseStatus(404, "Not found");
+					logger.error(resp.getHttpVersion() + " " + request.getRequestMethod() + " "
+							+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
+							+ resp.getResponseMessage() + " [" + getRemoteAddress() + "]");
+				}
 			} else {
-				resp.setResponseStatus(404, "Not found");
-				logger.error(resp.getHttpVersion() + " " + request.getRequestMethod() + " "
-						+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
-						+ resp.getResponseMessage() + " [" + getRemoteAddress() + "]");
+				if (!resp.isSuccessResponseCode())
+					logger.error(resp.getHttpVersion() + " " + request.getRequestMethod() + " "
+							+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
+							+ resp.getResponseMessage() + " [" + getRemoteAddress() + "]");
+				else
+					logger.info(resp.getHttpVersion() + " " + request.getRequestMethod() + " "
+							+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
+							+ resp.getResponseMessage() + " [" + getRemoteAddress() + "]");
 			}
-		} else {
-			if (!resp.isSuccessResponseCode())
-				logger.error(resp.getHttpVersion() + " " + request.getRequestMethod() + " "
-						+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
-						+ resp.getResponseMessage() + " [" + getRemoteAddress() + "]");
-			else
-				logger.info(resp.getHttpVersion() + " " + request.getRequestMethod() + " "
-						+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
-						+ resp.getResponseMessage() + " [" + getRemoteAddress() + "]");
-		}
 
-		// Set body if missing
-		if (!resp.hasResponseBody()) {
-			if (!resp.isSuccessResponseCode()) {
-				// Set error
-				resp.setContent("text/html", server.getErrorPageGenerator().apply(resp, request));
+			// Set body if missing
+			if (!resp.hasResponseBody()) {
+				if (!resp.isSuccessResponseCode()) {
+					// Set error
+					resp.setContent("text/html", server.getErrorPageGenerator().apply(resp, request));
+				}
+			}
+
+			// Send response
+			SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
+			dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+			resp.addHeader("Date", dateFormat.format(new Date()));
+			postProcessResponse(resp, request);
+			sendResponse(resp, request);
+		} finally {
+			// If needed, we should close the response stream if its present to prevent
+			// resource leakage
+			if (resp.getBodyStream() != null) {
+				try {
+					resp.getBodyStream().close();
+				} catch (IOException e) {
+				}
 			}
 		}
-
-		// Send response
-		SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
-		dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
-		resp.addHeader("Date", dateFormat.format(new Date()));
-		postProcessResponse(resp, request);
-		sendResponse(resp, request);
 	}
 
 	/**
