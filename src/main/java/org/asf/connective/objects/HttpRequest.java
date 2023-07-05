@@ -161,7 +161,7 @@ public class HttpRequest extends HttpObject {
 	public void transferRequestBody(OutputStream output) throws IOException {
 		if (body == null)
 			return;
-		if (bodyContentLength > 0) {
+		if (bodyContentLength > -1) {
 			long length = bodyContentLength;
 			int tr = 0;
 			for (long i = 0; i < length; i += tr) {
