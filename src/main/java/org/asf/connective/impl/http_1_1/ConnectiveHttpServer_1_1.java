@@ -67,38 +67,7 @@ public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 		serverName = name;
 	}
 
-	protected Thread serverProcessor = new Thread(() -> {
-		// Server loop
-		while (connected) {
-			try {
-				Socket client = socket.accept();
-
-				acceptConnection(client);
-				InputStream in = getClientInput(client);
-				OutputStream out = getClientOutput(client);
-
-				RemoteClientHttp_1_1 cl = new RemoteClientHttp_1_1(client, this, in, out,
-						(req) -> new HttpResponse("HTTP/1.1"));
-				try {
-					synchronized (clients) {
-						clients.add(cl);
-					}
-					cl.beginReceive();
-				} catch (IOException ex) {
-					if (!connected)
-						break;
-
-					getLogger().error("Failed to handle messages from [[" + cl.getRemoteAddress() + "]:"
-							+ cl.getRemotePort() + "]", ex);
-				}
-			} catch (IOException ex) {
-				if (!connected)
-					break;
-
-				getLogger().error("Failed to handle client during handhsake", ex);
-			}
-		}
-	}, "Connective server thread");
+	protected Thread serverThread;
 
 	/**
 	 * Retrieves the client output stream (override only)
@@ -137,7 +106,40 @@ public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 		getLogger().debug("Starting server on " + address.getHostAddress() + ", port " + port + "...");
 		connected = true;
 		socket = getServerSocket(port, address);
-		serverProcessor.start();
+		serverThread = new Thread(() -> {
+			// Server loop
+			while (connected) {
+				try {
+					Socket client = socket.accept();
+
+					acceptConnection(client);
+					InputStream in = getClientInput(client);
+					OutputStream out = getClientOutput(client);
+
+					RemoteClientHttp_1_1 cl = new RemoteClientHttp_1_1(client, this, in, out,
+							(req) -> new HttpResponse("HTTP/1.1"));
+					try {
+						synchronized (clients) {
+							clients.add(cl);
+						}
+						cl.beginReceive();
+					} catch (IOException ex) {
+						if (!connected)
+							break;
+
+						getLogger().error("Failed to handle messages from [[" + cl.getRemoteAddress() + "]:"
+								+ cl.getRemotePort() + "]", ex);
+					}
+				} catch (IOException ex) {
+					if (!connected)
+						break;
+
+					getLogger().error("Failed to handle client during handhsake", ex);
+				}
+			}
+		}, "Connective server thread");
+		serverThread.setDaemon(true);
+		serverThread.start();
 		getLogger().debug("Server online, waiting for requests...");
 	}
 
