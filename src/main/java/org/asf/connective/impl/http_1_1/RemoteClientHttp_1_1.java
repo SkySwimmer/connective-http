@@ -148,8 +148,13 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 				// Process the request
 				processRequests(msg);
 			} catch (Exception ex) {
-				if (!server.connected || ex instanceof SSLException || ex instanceof SocketException)
+				if (!server.connected || ex instanceof SSLException || ex instanceof SocketException) {
+					// Remove client
+					synchronized (server.clients) {
+						server.clients.remove(this);
+					}
 					return;
+				}
 
 				getLogger().error("Failed to process request from [[" + addr + "]:" + port + "]", ex);
 				if (msg != null) {
