@@ -86,7 +86,7 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 		while (!receiving && tsTc == tsT && rndTc == rndT) {
 			if (receiving || tsTc != tsT || rndTc != rndT || socket == null)
 				return;
-			if ((System.currentTimeMillis() - start) >= timeout + 3000) {
+			if ((System.currentTimeMillis() - start) >= (timeout * 1000)) {
 				closeConnection();
 				break;
 			}
