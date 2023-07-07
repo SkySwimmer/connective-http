@@ -91,7 +91,7 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 				break;
 			}
 			try {
-				Thread.sleep(1);
+				Thread.sleep(100);
 			} catch (InterruptedException e) {
 				break;
 			}
