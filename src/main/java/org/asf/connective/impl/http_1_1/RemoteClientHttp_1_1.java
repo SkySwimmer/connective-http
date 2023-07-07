@@ -117,10 +117,32 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 	}
 
 	protected void receive() {
+		HttpRequest msg = null;
 		while (true) {
 			receiving = false;
-			HttpRequest msg = null;
 			try {
+				// Handle previous
+				try {
+					if (msg != null && msg.getBodyStream() != null
+							&& msg.getBodyStream() instanceof LengthTrackingStream) {
+						LengthTrackingStream strm = (LengthTrackingStream) msg.getBodyStream();
+						long read = strm.getBytesRead();
+						long len = msg.getBodyLength();
+						if (read < len) {
+							long remaining = len - read;
+							while (remaining != 0) {
+								if (remaining < 100000)
+									strm.readNBytes((int) remaining);
+								else {
+									remaining -= 100000;
+									strm.readNBytes(100000);
+								}
+							}
+						}
+					}
+				} catch (IllegalStateException e) {
+				}
+
 				// Read request
 				msg = readRequest();
 
