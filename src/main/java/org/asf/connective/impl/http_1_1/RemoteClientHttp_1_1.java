@@ -505,4 +505,9 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 	public String getRemoteHost() {
 		return socket.getInetAddress().getCanonicalHostName();
 	}
+
+	@Override
+	public boolean isConnected() {
+		return socket != null;
+	}
 }

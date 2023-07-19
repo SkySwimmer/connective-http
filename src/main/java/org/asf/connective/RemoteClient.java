@@ -171,6 +171,13 @@ public abstract class RemoteClient {
 	public abstract InputStream getInputStream();
 
 	/**
+	 * Checks if the client is still connected
+	 * 
+	 * @return True if connected, false otherwise
+	 */
+	public abstract boolean isConnected();
+
+	/**
 	 * Closes the connection
 	 */
 	public abstract void closeConnection();
