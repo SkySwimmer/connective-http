@@ -242,8 +242,9 @@ public class DocumentProcessor {
 				IndexPageProvider prov = context.getIndexPage(path);
 				if (prov == null)
 					return false; // Denied listing
-				File[] files = sourceFile.listFiles(t -> !t.isDirectory());
-				File[] dirs = sourceFile.listFiles(t -> t.isDirectory());
+				File[] files = Stream.of(sourceFile.listFiles(t -> !t.isDirectory())).sorted()
+						.toArray(t -> new File[t]);
+				File[] dirs = Stream.of(sourceFile.listFiles(t -> t.isDirectory())).sorted().toArray(t -> new File[t]);
 				prov = prov.instantiate(server, request, response, files, dirs, path);
 
 				// Provide info
