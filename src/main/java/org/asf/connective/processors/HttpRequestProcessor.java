@@ -120,6 +120,16 @@ public abstract class HttpRequestProcessor {
 	/**
 	 * Sets the response body (binary)
 	 * 
+	 * @param type Content type
+	 * @param body Response body bytes
+	 */
+	protected void setResponseContent(String type, byte[] body) {
+		getResponse().setContent(type, body);
+	}
+
+	/**
+	 * Sets the response body (binary)
+	 * 
 	 * @param body Response body bytes
 	 */
 	protected void setResponseContent(byte[] body) {
