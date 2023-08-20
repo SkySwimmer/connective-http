@@ -281,7 +281,7 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 		for (String name : server.getDefaultHeaders().getHeaderNames())
 			if (!response.hasHeader(name))
 				response.addHeader(name, server.getDefaultHeaders().getHeaderValue(name));
-		if (response.getBodyLength() <= 0 && (response.getBodyStream() != null
+		if (response.getBodyLength() < 0 && (response.getBodyStream() != null
 				&& (sourceRequest != null && !sourceRequest.getRequestMethod().equalsIgnoreCase("HEAD"))
 				&& response.getResponseCode() != 204))
 			response.addHeader("Transfer-Encoding", "chunked");
