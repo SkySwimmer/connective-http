@@ -165,7 +165,7 @@ public class HttpRequest extends HttpObject {
 			long length = bodyContentLength;
 			int tr = 0;
 			for (long i = 0; i < length; i += tr) {
-				tr = Integer.MAX_VALUE / 1000;
+				tr = 1000;
 				if ((length - (long) i) < tr) {
 					tr = body.available();
 					if (tr == 0) {

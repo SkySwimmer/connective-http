@@ -370,7 +370,7 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 				long length = response.getBodyLength();
 				int tr = 0;
 				for (long i = 0; i < length; i += tr) {
-					tr = Integer.MAX_VALUE / 1000;
+					tr = 1000;
 					if ((length - (long) i) < tr) {
 						tr = response.getBodyStream().available();
 						if (tr == 0) {
