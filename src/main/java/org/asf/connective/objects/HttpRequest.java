@@ -66,14 +66,14 @@ public class HttpRequest extends HttpObject {
 			requestPath = URLDecoder.decode(requestPath, "UTF-8");
 
 			// Sanitize path
+			if (requestPath.contains("\\"))
+				requestPath = requestPath.replace("\\", "/");
 			while (requestPath.startsWith("/"))
 				requestPath = requestPath.substring(1);
 			while (requestPath.endsWith("/"))
 				requestPath = requestPath.substring(0, requestPath.length() - 1);
 			while (requestPath.contains("//"))
 				requestPath = requestPath.replace("//", "/");
-			if (requestPath.contains("\\"))
-				requestPath = requestPath.replace("\\", "/");
 			if (!requestPath.startsWith("/"))
 				requestPath = "/" + requestPath;
 		} catch (Exception e) {
