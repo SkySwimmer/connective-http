@@ -3,6 +3,7 @@ package org.asf.connective;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import org.asf.connective.io.IoUtil;
 import org.asf.connective.processors.*;
 import org.junit.jupiter.api.Test;
 
@@ -251,7 +252,7 @@ public class ConnectiveServerTest {
 					}
 					tr = bodyStream.available();
 				}
-				output.write(bodyStream.readNBytes(tr));
+				output.write(IoUtil.readNBytes(bodyStream, tr));
 			}
 		} else {
 			bodyStream.transferTo(output);

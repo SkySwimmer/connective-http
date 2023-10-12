@@ -19,6 +19,7 @@ import javax.net.ssl.SSLException;
 import org.asf.connective.RemoteClient;
 import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
+import org.asf.connective.io.IoUtil;
 import org.asf.connective.io.LengthTrackingStream;
 import org.asf.connective.headers.HeaderCollection;
 import org.asf.connective.headers.HttpHeader;
@@ -132,10 +133,10 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 							long remaining = len - read;
 							while (remaining != 0) {
 								if (remaining < 100000)
-									strm.readNBytes((int) remaining);
+									IoUtil.readNBytes(strm, (int) remaining);
 								else {
 									remaining -= 100000;
-									strm.readNBytes(100000);
+									IoUtil.readNBytes(strm, 100000);
 								}
 							}
 						}
@@ -379,7 +380,7 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 						}
 						tr = response.getBodyStream().available();
 					}
-					out.write(response.getBodyStream().readNBytes(tr));
+					out.write(IoUtil.readNBytes(response.getBodyStream(), tr));
 				}
 			} else {
 				// Write in chunks

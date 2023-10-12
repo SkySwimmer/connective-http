@@ -6,10 +6,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.asf.connective.headers.HeaderCollection;
+import org.asf.connective.io.IoUtil;
 
 /**
  * 
@@ -174,7 +176,7 @@ public class HttpRequest extends HttpObject {
 					}
 					tr = body.available();
 				}
-				output.write(body.readNBytes(tr));
+				output.write(IoUtil.readNBytes(body, tr));
 			}
 		} else {
 			// TODO: chunked content
