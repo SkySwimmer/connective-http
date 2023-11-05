@@ -246,7 +246,8 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 			long contentLength = -1;
 			if (headers.hasHeader("Content-Length")) {
 				contentLength = Long.parseLong(headers.getHeaderValue("Content-Length"));
-				body = new LengthTrackingStream(in);
+				if (contentLength > 0)
+					body = new LengthTrackingStream(in);
 			}
 
 			// Create request object
