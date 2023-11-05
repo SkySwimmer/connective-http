@@ -372,16 +372,12 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 				long length = response.getBodyLength();
 				int tr = 0;
 				for (long i = 0; i < length; i += tr) {
-					tr = 1000;
-					if ((length - (long) i) < tr) {
-						tr = response.getBodyStream().available();
-						if (tr == 0) {
-							out.write(response.getBodyStream().read());
-							i += 1;
-						}
-						tr = response.getBodyStream().available();
-					}
-					out.write(IoUtil.readNBytes(response.getBodyStream(), tr));
+					tr = 1024 * 1024;
+					if (tr > length)
+						tr = (int) length;
+					byte[] b = IoUtil.readNBytes(response.getBodyStream(), tr);
+					tr = b.length;
+					out.write(b);
 				}
 			} else {
 				// Write in chunks
