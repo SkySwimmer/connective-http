@@ -11,7 +11,7 @@ public class IoUtil {
 		int c = 0;
 		while (true) {
 			try {
-				int r = input.read(res, c, num);
+				int r = input.read(res, c, num - c);
 				if (r == -1)
 					break;
 				c += r;
