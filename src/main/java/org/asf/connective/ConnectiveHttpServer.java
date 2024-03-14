@@ -497,8 +497,10 @@ public abstract class ConnectiveHttpServer {
 						&& t.getClass().getTypeName().equals(processor.getClass().getTypeName())
 						&& t.supportsChildPaths() == processor.supportsChildPaths()
 						&& ((HttpPushProcessor) t).supportsNonPush() == processor.supportsNonPush()
-						&& t.path() == processor.path()))
+						&& t.path() == processor.path())) {
 			processors.add(processor);
+			processorsRequiresResort = true;
+		}
 	}
 
 	/**
