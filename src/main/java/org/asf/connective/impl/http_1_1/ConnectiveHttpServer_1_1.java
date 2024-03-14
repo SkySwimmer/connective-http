@@ -104,6 +104,7 @@ public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 
 		// Start server
 		getLogger().debug("Starting server on " + address.getHostAddress() + ", port " + port + "...");
+		resortProcessorsIfNeeded();
 		connected = true;
 		socket = getServerSocket(port, address);
 		serverThread = new Thread(() -> {

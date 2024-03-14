@@ -34,14 +34,14 @@ public abstract class ConnectiveHttpServer {
 	/**
 	 * Version of the ConnectiveHTTP library
 	 */
-	public static final String CONNECTIVE_VERSION = "1.0.0.A14";
+	public static final String CONNECTIVE_VERSION = "1.0.0.A15";
 
 	private ContentSource contentSource = new DefaultContentSource();
 	private Logger logger = LogManager.getLogger("connective-http");
 	private HeaderCollection defaultHeaders = new HeaderCollection();
 
-	protected ArrayList<HttpRequestProcessor> reqProcessors = new ArrayList<HttpRequestProcessor>();
-	protected ArrayList<HttpPushProcessor> pushProcessors = new ArrayList<HttpPushProcessor>();
+	protected boolean processorsRequiresResort;
+	protected ArrayList<HttpRequestProcessor> processors = new ArrayList<HttpRequestProcessor>();
 
 	protected ArrayList<String> allowedProxySourceAddresses = new ArrayList<String>();
 
@@ -116,12 +116,33 @@ public abstract class ConnectiveHttpServer {
 		}
 	}
 
-	public HttpRequestProcessor[] getRequestProcessors() {
-		return reqProcessors.toArray(t -> new HttpRequestProcessor[t]);
+	/**
+	 * Retrieves all registered HTTP request processors
+	 * 
+	 * @return Array of HttpRequestProcessor instances
+	 */
+	public HttpRequestProcessor[] getAllRequestProcessors() {
+		resortProcessorsIfNeeded();
+		return processors.toArray(t -> new HttpRequestProcessor[t]);
 	}
 
+	/**
+	 * @deprecated No longer supported, use getAllRequestProcessors() instead
+	 */
+	@Deprecated
+	public HttpPushProcessor[] getRequestProcessors() {
+		resortProcessorsIfNeeded();
+		return processors.stream().filter(t -> !(t instanceof HttpPushProcessor))
+				.toArray(t -> new HttpPushProcessor[t]);
+	}
+
+	/**
+	 * @deprecated No longer supported, use getAllRequestProcessors() instead
+	 */
+	@Deprecated
 	public HttpPushProcessor[] getPushProcessors() {
-		return pushProcessors.toArray(t -> new HttpPushProcessor[t]);
+		resortProcessorsIfNeeded();
+		return processors.stream().filter(t -> t instanceof HttpPushProcessor).toArray(t -> new HttpPushProcessor[t]);
 	}
 
 	private static ArrayList<IServerAdapterDefinition> adapters = new ArrayList<IServerAdapterDefinition>(
@@ -471,11 +492,13 @@ public abstract class ConnectiveHttpServer {
 	 * @param processor The processor implementation to register
 	 */
 	public void registerProcessor(HttpPushProcessor processor) {
-		if (!pushProcessors.stream()
-				.anyMatch(t -> t.getClass().getTypeName().equals(processor.getClass().getTypeName())
+		if (!processors.stream()
+				.anyMatch(t -> t instanceof HttpPushProcessor
+						&& t.getClass().getTypeName().equals(processor.getClass().getTypeName())
 						&& t.supportsChildPaths() == processor.supportsChildPaths()
-						&& t.supportsNonPush() == processor.supportsNonPush() && t.path() == processor.path()))
-			pushProcessors.add(processor);
+						&& ((HttpPushProcessor) t).supportsNonPush() == processor.supportsNonPush()
+						&& t.path() == processor.path()))
+			processors.add(processor);
 	}
 
 	/**
@@ -488,9 +511,11 @@ public abstract class ConnectiveHttpServer {
 			registerProcessor((HttpPushProcessor) processor);
 			return;
 		}
-		if (!reqProcessors.stream().anyMatch(t -> t.getClass().getTypeName().equals(processor.getClass().getTypeName())
-				&& t.supportsChildPaths() == processor.supportsChildPaths() && t.path() == processor.path()))
-			reqProcessors.add(processor);
+		if (!processors.stream().anyMatch(t -> t.getClass().getTypeName().equals(processor.getClass().getTypeName())
+				&& t.supportsChildPaths() == processor.supportsChildPaths() && t.path() == processor.path())) {
+			processors.add(processor);
+			processorsRequiresResort = true;
+		}
 	}
 
 	/**
@@ -517,4 +542,33 @@ public abstract class ConnectiveHttpServer {
 	 * @return Server protocol name
 	 */
 	public abstract String getProtocolName();
+
+	/**
+	 * Re-sorts all processors, required to properly process requests
+	 */
+	protected void resortProcessorsIfNeeded() {
+		if (processorsRequiresResort) {
+			// Resort
+			processors.sort((t1, t2) -> {
+				return -Integer.compare(sanitizePath(t1.path()).split("/").length,
+						sanitizePath(t2.path()).split("/").length);
+			});
+		}
+		processorsRequiresResort = false;
+	}
+
+	private String sanitizePath(String path) {
+		if (path.contains("\\"))
+			path = path.replace("\\", "/");
+		while (path.startsWith("/"))
+			path = path.substring(1);
+		while (path.endsWith("/"))
+			path = path.substring(0, path.length() - 1);
+		while (path.contains("//"))
+			path = path.replace("//", "/");
+		if (!path.startsWith("/"))
+			path = "/" + path;
+		return path;
+	}
+
 }

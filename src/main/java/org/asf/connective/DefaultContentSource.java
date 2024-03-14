@@ -1,7 +1,6 @@
 package org.asf.connective;
 
 import java.io.IOException;
-import java.util.ArrayList;
 
 import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
@@ -28,19 +27,16 @@ class DefaultContentSource extends ContentSource {
 	public boolean process(String path, HttpRequest request, HttpResponse response, RemoteClient client,
 			ConnectiveHttpServer server) throws IOException {
 		// Load handlers
-		ArrayList<HttpRequestProcessor> reqProcessors = new ArrayList<HttpRequestProcessor>(server.reqProcessors);
-		ArrayList<HttpPushProcessor> pushProcessors = new ArrayList<HttpPushProcessor>(server.pushProcessors);
 		boolean compatible = false;
-		for (HttpPushProcessor proc : pushProcessors) {
-			if (proc.supportsNonPush()) {
-				reqProcessors.add(proc);
-			}
-		}
+		HttpRequestProcessor[] processors = server.getAllRequestProcessors();
 
 		// Find handler
 		if (request.hasRequestBody()) {
 			HttpPushProcessor impl = null;
-			for (HttpPushProcessor proc : pushProcessors) {
+			for (HttpRequestProcessor p : processors) {
+				if (!(p instanceof HttpPushProcessor))
+					continue;
+				HttpPushProcessor proc = (HttpPushProcessor) p;
 				if (!proc.supportsChildPaths()) {
 					String url = request.getRequestPath();
 					if (!url.endsWith("/"))
@@ -58,11 +54,10 @@ class DefaultContentSource extends ContentSource {
 				}
 			}
 			if (!compatible) {
-				pushProcessors.sort((t1, t2) -> {
-					return -Integer.compare(sanitizePath(t1.path()).split("/").length,
-							sanitizePath(t2.path()).split("/").length);
-				});
-				for (HttpPushProcessor proc : pushProcessors) {
+				for (HttpRequestProcessor p : processors) {
+					if (!(p instanceof HttpPushProcessor))
+						continue;
+					HttpPushProcessor proc = (HttpPushProcessor) p;
 					if (proc.supportsChildPaths()) {
 						String url = request.getRequestPath();
 						if (!url.endsWith("/"))
@@ -86,7 +81,9 @@ class DefaultContentSource extends ContentSource {
 			}
 		} else {
 			HttpRequestProcessor impl = null;
-			for (HttpRequestProcessor proc : reqProcessors) {
+			for (HttpRequestProcessor proc : processors) {
+				if (proc instanceof HttpPushProcessor)
+					continue;
 				if (!proc.supportsChildPaths()) {
 					String url = request.getRequestPath();
 					if (!url.endsWith("/"))
@@ -104,11 +101,9 @@ class DefaultContentSource extends ContentSource {
 				}
 			}
 			if (!compatible) {
-				reqProcessors.sort((t1, t2) -> {
-					return -Integer.compare(sanitizePath(t1.path()).split("/").length,
-							sanitizePath(t2.path()).split("/").length);
-				});
-				for (HttpRequestProcessor proc : reqProcessors) {
+				for (HttpRequestProcessor proc : processors) {
+					if (proc instanceof HttpPushProcessor)
+						continue;
 					if (proc.supportsChildPaths()) {
 						String url = request.getRequestPath();
 						if (!url.endsWith("/"))
