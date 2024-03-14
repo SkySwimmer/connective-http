@@ -3,10 +3,12 @@ package org.asf.connective.impl.http_1_1;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Random;
@@ -31,8 +33,9 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 	private Socket socket;
 	private InputStream in;
 	private OutputStream out;
+
+	private String host;
 	private String addr;
-	private int port;
 
 	protected int timeout = 5;
 	protected int maxRequests = 0;
@@ -42,6 +45,11 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 	private static Random rnd = new Random();
 	private int rndT = 0;
 	private long tsT = 0;
+
+	private String originalHost;
+	private String originalAddress = null;
+	private String proxiedAddress = null;
+	private ArrayList<String> proxies = new ArrayList<String>();
 
 	protected RemoteClientHttp_1_1(Socket socket, ConnectiveHttpServer_1_1 server, InputStream in, OutputStream out,
 			Function<HttpRequest, HttpResponse> responseCreator) {
@@ -54,7 +62,9 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 		// Retrieve address and port
 		InetSocketAddress addr = (InetSocketAddress) socket.getRemoteSocketAddress();
 		this.addr = addr.getAddress().getHostAddress();
-		this.port = addr.getPort();
+		this.host = addr.getAddress().getCanonicalHostName();
+		originalHost = this.host;
+		originalAddress = this.addr;
 	}
 
 	public Socket getSocket() {
@@ -64,11 +74,6 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 	@Override
 	public String getRemoteAddress() {
 		return addr;
-	}
-
-	@Override
-	public int getRemotePort() {
-		return port;
 	}
 
 	public void beginReceive() throws IOException {
@@ -179,7 +184,7 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 					return;
 				}
 
-				getLogger().error("Failed to process request from [[" + addr + "]:" + port + "]", ex);
+				getLogger().error("Failed to process request from [" + addr + "]", ex);
 				if (msg != null) {
 					HttpResponse resp = createResponse(msg);
 					resp.setResponseStatus(500, "Internal server error");
@@ -202,6 +207,130 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 	private void processRequests(HttpRequest msg) throws IOException {
 		// Mark as receiving
 		receiving = true;
+
+		// Proxy support
+		if (msg.hasHeader("X-Forwarded-For")) {
+			// Clear proxied addresses
+			proxiedAddress = null;
+			addr = originalAddress;
+			host = originalHost;
+			proxies = new ArrayList<String>();
+
+			// Go through list
+			ArrayList<String> addresses = new ArrayList<String>();
+			for (String val : msg.getHeaderValues("X-Forwarded-For")) {
+				for (String addr : val.replace(" ", "").split(",")) {
+					addresses.add(addr);
+				}
+			}
+
+			// Get proxied address
+			if (addresses.size() != 0) {
+				// Update
+				proxiedAddress = addresses.remove(0);
+
+				// Add proxy
+				proxies.add(originalAddress);
+
+				// Add remaining proxies
+				for (int i = addresses.size() - 1; i >= 0; i--) {
+					proxies.add(addresses.get(i));
+				}
+
+				// Check if authoritive
+				if (getServer().isAllowedProxySource(originalAddress)) {
+					// Authoritive
+					addr = proxiedAddress;
+					host = proxiedAddress;
+					try {
+						host = InetAddress.getByName(addr).getCanonicalHostName();
+					} catch (Exception e) {
+					}
+
+					// Set host header
+					if (msg.hasHeader("X-Forwarded-Host")) {
+						if (msg.hasHeader("Host"))
+							msg.addHeader("X-Proxy-Host", msg.getHeaderValue("Host"));
+						msg.addHeader("Host", msg.getHeaderValue("X-Forwarded-Host"));
+					}
+				}
+			}
+		}
+		if (msg.hasHeader("Forwarded")) {
+			// Clear proxied addresses
+			proxiedAddress = null;
+			addr = originalAddress;
+			host = originalHost;
+			proxies = new ArrayList<String>();
+			String proxiedHost = null;
+
+			// Go through list
+			ArrayList<String> addresses = new ArrayList<String>();
+			for (String val : msg.getHeaderValues("Forwarded")) {
+				for (String setting : val.replace(" ", "").split(",")) {
+					for (String directive : setting.split(";")) {
+						if (directive.contains("=")) {
+							String key = directive.substring(0, directive.indexOf("=")).toLowerCase();
+							String value = directive.substring(directive.indexOf("=") + 1);
+
+							// Handle directive
+							switch (key) {
+
+							case "for": {
+								// Client details (and proxies)
+								if (value.startsWith("[")) {
+									value = value.substring(1);
+									value = value.substring(0, value.indexOf("]"));
+								}
+								addresses.add(value);
+								break;
+							}
+
+							case "host": {
+								// Host
+								if (proxiedHost == null)
+									proxiedHost = value;
+								break;
+							}
+
+							}
+						}
+					}
+				}
+			}
+
+			// Get proxied address
+			if (addresses.size() != 0) {
+				// Update
+				proxiedAddress = addresses.remove(0);
+
+				// Add proxy
+				proxies.add(originalAddress);
+
+				// Add remaining proxies
+				for (int i = addresses.size() - 1; i >= 0; i--) {
+					proxies.add(addresses.get(i));
+				}
+
+				// Check if authoritive
+				if (getServer().isAllowedProxySource(originalAddress)) {
+					// Authoritive
+					addr = proxiedAddress;
+					host = proxiedAddress;
+					try {
+						host = InetAddress.getByName(addr).getCanonicalHostName();
+					} catch (Exception e) {
+					}
+
+					// Set host header
+					if (proxiedHost != null) {
+						if (msg.hasHeader("Host"))
+							msg.addHeader("X-Proxy-Host", msg.getHeaderValue("Host"));
+						msg.addHeader("Host", proxiedHost);
+					}
+				}
+			}
+		}
 
 		// Handle request
 		processRequest(msg);
@@ -501,11 +630,21 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 
 	@Override
 	public String getRemoteHost() {
-		return socket.getInetAddress().getCanonicalHostName();
+		return host;
 	}
 
 	@Override
 	public boolean isConnected() {
 		return socket != null;
+	}
+
+	@Override
+	public String[] getProxyChain() {
+		return proxies.toArray(t -> new String[t]);
+	}
+
+	@Override
+	public String getRemoteProxiedClientAddress() {
+		return proxiedAddress;
 	}
 }

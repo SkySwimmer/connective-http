@@ -1,43 +1,110 @@
-package org.asf.connective.processors;
+package org.asf.connective.lambda;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.util.Map;
 
-import org.asf.connective.processors.HttpRequestProcessor;
 import org.asf.connective.ConnectiveHttpServer;
 import org.asf.connective.RemoteClient;
 import org.asf.connective.headers.HeaderCollection;
 import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
 
-/**
- * 
- * HTTP Request Processor
- * 
- * @author Sky Swimmer
- *
- */
-public abstract class HttpRequestProcessor {
+public class LambdaPushContext {
 
-	private ConnectiveHttpServer server;
-	private HttpResponse response;
+	private RemoteClient client;
 	private HttpRequest request;
+	private HttpResponse response;
+	private ConnectiveHttpServer server;
+	private String contentType;
+
+	public LambdaPushContext(RemoteClient client, HttpRequest request, HttpResponse response,
+			ConnectiveHttpServer server, String contentType) {
+		this.client = client;
+		this.request = request;
+		this.response = response;
+		this.server = server;
+		this.contentType = contentType;
+	}
 
 	/**
-	 * Instantiates a new processor with the server, request and response
+	 * Retrieves the request content type
 	 * 
-	 * @param server   Server to use
-	 * @param request  HTTP request
-	 * @param response HTTP response
-	 * @return New HttpGetProcessor configured for processing
+	 * @return Content type string
 	 */
-	public HttpRequestProcessor instantiate(ConnectiveHttpServer server, HttpRequest request, HttpResponse response) {
-		HttpRequestProcessor inst = createNewInstance();
-		inst.server = server;
-		inst.response = response;
-		inst.request = request;
-		return inst;
+	protected String getContentType() {
+		return contentType;
+	}
+
+	/**
+	 * Retrieves the body content stream
+	 * 
+	 * @return Stream that leads to the request content body
+	 */
+	protected InputStream getRequestBody() {
+		return getRequest().getBodyStream();
+	}
+
+	/**
+	 * Retrieves the body content as string
+	 * 
+	 * @return String representing the request body
+	 * @throws IOException If reading fails
+	 */
+	protected String getRequestBodyAsString() throws IOException {
+		return getRequest().getRequestBodyAsString();
+	}
+
+	/**
+	 * Retrieves the body content as string
+	 * 
+	 * @param encoding Encoding to use
+	 * @return String representing the request body
+	 * @throws IOException If reading fails
+	 */
+	protected String getRequestBodyAsString(String encoding) throws IOException {
+		return getRequest().getRequestBodyAsString(encoding);
+	}
+
+	/**
+	 * Retrieves the body content as string
+	 * 
+	 * @param encoding Encoding to use
+	 * @return String representing the request body
+	 * @throws IOException If reading fails
+	 */
+	protected String getRequestBodyAsString(Charset encoding) throws IOException {
+		return getRequest().getRequestBodyAsString(encoding);
+	}
+
+	/**
+	 * Transfers the request body
+	 * 
+	 * @param output Target stream
+	 * @throws IOException If transferring fails
+	 */
+	protected void transferRequestBody(OutputStream output) throws IOException {
+		getRequest().transferRequestBody(output);
+	}
+
+	/**
+	 * Retrieves the request body length
+	 * 
+	 * @return Request body length
+	 */
+	protected long getRequestBodyLength() {
+		return getRequest().getBodyLength();
+	}
+
+	/**
+	 * Retrieves the client making the request
+	 * 
+	 * @return RemoteClient instance.
+	 */
+	public RemoteClient getClient() {
+		return client;
 	}
 
 	/**
@@ -45,7 +112,7 @@ public abstract class HttpRequestProcessor {
 	 * 
 	 * @return ConnectiveHTTPServer instance.
 	 */
-	protected ConnectiveHttpServer getServer() {
+	public ConnectiveHttpServer getServer() {
 		return server;
 	}
 
@@ -54,7 +121,7 @@ public abstract class HttpRequestProcessor {
 	 * 
 	 * @return Request HTTP headers
 	 */
-	protected HeaderCollection getHeaders() {
+	public HeaderCollection getHeaders() {
 		return getRequest().getHeaders();
 	}
 
@@ -63,7 +130,7 @@ public abstract class HttpRequestProcessor {
 	 * 
 	 * @return HTTP header value
 	 */
-	protected String getHeader(String name) {
+	public String getHeader(String name) {
 		return getRequest().getHeaderValue(name);
 	}
 
@@ -72,7 +139,7 @@ public abstract class HttpRequestProcessor {
 	 * 
 	 * @return True if the header is present, false otherwise
 	 */
-	protected boolean hasHeader(String name) {
+	public boolean hasHeader(String name) {
 		return getRequest().hasHeader(name);
 	}
 
@@ -82,7 +149,7 @@ public abstract class HttpRequestProcessor {
 	 * @param header Header name
 	 * @param value  Header value
 	 */
-	protected void setResponseHeader(String header, String value) {
+	public void setResponseHeader(String header, String value) {
 		getResponse().addHeader(header, value);
 	}
 
@@ -94,7 +161,7 @@ public abstract class HttpRequestProcessor {
 	 * @param append True to add to the existing header if present, false to
 	 *               overwrite values (clears the header if already present)
 	 */
-	protected void setResponseHeader(String header, String value, boolean append) {
+	public void setResponseHeader(String header, String value, boolean append) {
 		getResponse().addHeader(header, value, append);
 	}
 
@@ -104,7 +171,7 @@ public abstract class HttpRequestProcessor {
 	 * @param type Content type
 	 * @param body Response body string
 	 */
-	protected void setResponseContent(String type, String body) {
+	public void setResponseContent(String type, String body) {
 		getResponse().setContent(type, body);
 	}
 
@@ -113,7 +180,7 @@ public abstract class HttpRequestProcessor {
 	 * 
 	 * @param body Response body string
 	 */
-	protected void setResponseContent(String body) {
+	public void setResponseContent(String body) {
 		setResponseContent("text/plain", body);
 	}
 
@@ -123,7 +190,7 @@ public abstract class HttpRequestProcessor {
 	 * @param type Content type
 	 * @param body Response body bytes
 	 */
-	protected void setResponseContent(String type, byte[] body) {
+	public void setResponseContent(String type, byte[] body) {
 		getResponse().setContent(type, body);
 	}
 
@@ -132,7 +199,7 @@ public abstract class HttpRequestProcessor {
 	 * 
 	 * @param body Response body bytes
 	 */
-	protected void setResponseContent(byte[] body) {
+	public void setResponseContent(byte[] body) {
 		getResponse().setContent(body);
 	}
 
@@ -142,7 +209,7 @@ public abstract class HttpRequestProcessor {
 	 * @param type Content type
 	 * @param body Input stream
 	 */
-	protected HttpResponse setResponseContent(String type, InputStream body) {
+	public HttpResponse setResponseContent(String type, InputStream body) {
 		return getResponse().setContent(type, body);
 	}
 
@@ -151,7 +218,7 @@ public abstract class HttpRequestProcessor {
 	 * 
 	 * @param body Input stream
 	 */
-	protected HttpResponse setResponseContent(InputStream body) {
+	public HttpResponse setResponseContent(InputStream body) {
 		return getResponse().setContent(body);
 	}
 
@@ -162,7 +229,7 @@ public abstract class HttpRequestProcessor {
 	 * @param body   Input stream
 	 * @param length Content length
 	 */
-	protected HttpResponse setResponseContent(String type, InputStream body, long length) {
+	public HttpResponse setResponseContent(String type, InputStream body, long length) {
 		return getResponse().setContent(type, body, length);
 	}
 
@@ -172,7 +239,7 @@ public abstract class HttpRequestProcessor {
 	 * @param body   Input stream
 	 * @param length Content length
 	 */
-	protected HttpResponse setResponseContent(InputStream body, long length) {
+	public HttpResponse setResponseContent(InputStream body, long length) {
 		return getResponse().setContent(body, length);
 	}
 
@@ -182,7 +249,7 @@ public abstract class HttpRequestProcessor {
 	 * @param status  New status code
 	 * @param message New status message
 	 */
-	protected HttpResponse setResponseStatus(int status, String message) {
+	public HttpResponse setResponseStatus(int status, String message) {
 		return response.setResponseStatus(status, message);
 	}
 
@@ -191,7 +258,7 @@ public abstract class HttpRequestProcessor {
 	 * 
 	 * @return HttpRequest instance
 	 */
-	protected HttpRequest getRequest() {
+	public HttpRequest getRequest() {
 		return request;
 	}
 
@@ -200,7 +267,7 @@ public abstract class HttpRequestProcessor {
 	 * 
 	 * @return HttpResponse instance
 	 */
-	protected HttpResponse getResponse() {
+	public HttpResponse getResponse() {
 		return response;
 	}
 
@@ -209,7 +276,7 @@ public abstract class HttpRequestProcessor {
 	 * 
 	 * @return Request path
 	 */
-	protected String getRequestPath() {
+	public String getRequestPath() {
 		return getRequest().getRequestPath();
 	}
 
@@ -218,7 +285,7 @@ public abstract class HttpRequestProcessor {
 	 * 
 	 * @return Request query string
 	 */
-	protected String getRequestQuery() {
+	public String getRequestQuery() {
 		return getRequest().getRequestQuery();
 	}
 
@@ -227,7 +294,7 @@ public abstract class HttpRequestProcessor {
 	 * 
 	 * @return Request query parameters
 	 */
-	protected Map<String, String> getRequestQueryParameters() {
+	public Map<String, String> getRequestQueryParameters() {
 		return getRequest().getRequestQueryParameters();
 	}
 
@@ -236,7 +303,7 @@ public abstract class HttpRequestProcessor {
 	 * 
 	 * @return HTTP raw request string
 	 */
-	protected String getRawRequestResource() {
+	public String getRawRequestResource() {
 		return getRequest().getRawRequestResource();
 	}
 
@@ -245,38 +312,8 @@ public abstract class HttpRequestProcessor {
 	 * 
 	 * @return HTTP request method string
 	 */
-	protected String getRequestMethod() {
+	public String getRequestMethod() {
 		return getRequest().getRequestMethod();
 	}
 
-	/**
-	 * Retrieves the path this processor supports
-	 * 
-	 * @return File path string
-	 */
-	public abstract String path();
-
-	/**
-	 * Checks if this processor supports child paths, false by default
-	 * 
-	 * @return True if the processor supports this, false otherwise
-	 */
-	public boolean supportsChildPaths() {
-		return false;
-	}
-
-	/**
-	 * Called to handle the request
-	 * 
-	 * @param path   Path string
-	 * @param method Request method
-	 * @param client Remote client
-	 * @throws IOException If processing fails
-	 */
-	public abstract void process(String path, String method, RemoteClient client) throws IOException;
-
-	/**
-	 * Creates a new instance of this HTTP processor
-	 */
-	public abstract HttpRequestProcessor createNewInstance();
 }

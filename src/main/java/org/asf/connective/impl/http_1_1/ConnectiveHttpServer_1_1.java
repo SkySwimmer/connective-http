@@ -127,8 +127,7 @@ public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 						if (!connected)
 							break;
 
-						getLogger().error("Failed to handle messages from [[" + cl.getRemoteAddress() + "]:"
-								+ cl.getRemotePort() + "]", ex);
+						getLogger().error("Failed to handle messages from [" + cl.getRemoteAddress() + "]", ex);
 					}
 				} catch (IOException ex) {
 					if (!connected)

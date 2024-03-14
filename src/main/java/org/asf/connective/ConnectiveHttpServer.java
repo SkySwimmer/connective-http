@@ -3,6 +3,7 @@ package org.asf.connective;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -15,9 +16,12 @@ import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
 import org.asf.connective.processors.HttpPushProcessor;
 import org.asf.connective.processors.HttpRequestProcessor;
-
+import org.asf.connective.impl.DelegatePushProcessor;
+import org.asf.connective.impl.DelegateRequestProcessor;
 import org.asf.connective.impl.http_1_1.Http_1_1_Adapter;
 import org.asf.connective.impl.https_1_1.Https_1_1_Adapter;
+import org.asf.connective.lambda.LambdaPushProcessor;
+import org.asf.connective.lambda.LambdaRequestProcessor;
 
 /**
  * 
@@ -30,7 +34,7 @@ public abstract class ConnectiveHttpServer {
 	/**
 	 * Version of the ConnectiveHTTP library
 	 */
-	public static final String CONNECTIVE_VERSION = "1.0.0.A13";
+	public static final String CONNECTIVE_VERSION = "1.0.0.A14";
 
 	private ContentSource contentSource = new DefaultContentSource();
 	private Logger logger = LogManager.getLogger("connective-http");
@@ -38,6 +42,79 @@ public abstract class ConnectiveHttpServer {
 
 	protected ArrayList<HttpRequestProcessor> reqProcessors = new ArrayList<HttpRequestProcessor>();
 	protected ArrayList<HttpPushProcessor> pushProcessors = new ArrayList<HttpPushProcessor>();
+
+	protected ArrayList<String> allowedProxySourceAddresses = new ArrayList<String>();
+
+	public ConnectiveHttpServer() {
+		// Proxies
+		for (String addr : System.getProperty("connectiveAllowedProxies", "").replace(" ", "").split(","))
+			addAllowedProxySources(addr);
+		for (String addr : System.getProperty("connectiveAllowProxies", "").replace(" ", "").split(","))
+			addAllowedProxySources(addr);
+		for (String addr : System.getProperty("connectiveGrantProxies", "").replace(" ", "").split(","))
+			addAllowedProxySources(addr);
+	}
+
+	/**
+	 * Retrieves the list of allowed addresses for proxy processing, this list
+	 * controls which proxies are authorized to update the client addresses
+	 * 
+	 * @return Array of allowed proxy source addresses
+	 */
+	public String[] getAllowedProxySourceAddresses() {
+		while (true) {
+			try {
+				return allowedProxySourceAddresses.toArray(t -> new String[t]);
+			} catch (ConcurrentModificationException e) {
+			}
+		}
+	}
+
+	/**
+	 * Checks if a specific proxy is allowed to update the client addresses
+	 * 
+	 * @param address Address of the proxy to verify
+	 * @return True if allowed, false otherwise
+	 */
+	public boolean isAllowedProxySource(String address) {
+		while (true) {
+			try {
+				return allowedProxySourceAddresses.stream().anyMatch(t -> t.toLowerCase().equals(address));
+			} catch (ConcurrentModificationException e) {
+			}
+		}
+	}
+
+	/**
+	 * Adds allowed proxy source addresses
+	 * 
+	 * @param address The address of the proxy server to whitelist
+	 */
+	public void addAllowedProxySources(String address) {
+		synchronized (allowedProxySourceAddresses) {
+			allowedProxySourceAddresses.add(address);
+		}
+	}
+
+	/**
+	 * Removes allowed proxy source addresses
+	 * 
+	 * @param address The address of the proxy server to remove from the whitelist
+	 */
+	public void removeAllowedProxySources(String address) {
+		synchronized (allowedProxySourceAddresses) {
+			allowedProxySourceAddresses.remove(address);
+		}
+	}
+
+	/**
+	 * Clears all allowed proxy source addresses
+	 */
+	public void clearAllowedProxySources() {
+		synchronized (allowedProxySourceAddresses) {
+			allowedProxySourceAddresses.clear();
+		}
+	}
 
 	public HttpRequestProcessor[] getRequestProcessors() {
 		return reqProcessors.toArray(t -> new HttpRequestProcessor[t]);
@@ -150,7 +227,42 @@ public abstract class ConnectiveHttpServer {
 		IServerAdapterDefinition adapter = findAdapter(adapterName);
 		if (adapter == null)
 			return null;
-		return adapter.createServer(configuration);
+		ConnectiveHttpServer srv = adapter.createServer(configuration);
+
+		// Update
+		if (configuration.containsKey("allowed-proxies")) {
+			for (String addr : configuration.get("allowed-proxies").replace(" ", "").split(",")) {
+				srv.addAllowedProxySources(addr);
+			}
+		}
+		if (configuration.containsKey("Allowed-proxies")) {
+			for (String addr : configuration.get("Allowed-proxies").replace(" ", "").split(",")) {
+				srv.addAllowedProxySources(addr);
+			}
+		}
+		if (configuration.containsKey("Allowed-Proxies")) {
+			for (String addr : configuration.get("Allowed-Proxies").replace(" ", "").split(",")) {
+				srv.addAllowedProxySources(addr);
+			}
+		}
+		if (configuration.containsKey("allow-proxy")) {
+			for (String addr : configuration.get("allow-proxy").replace(" ", "").split(",")) {
+				srv.addAllowedProxySources(addr);
+			}
+		}
+		if (configuration.containsKey("Allow-proxy")) {
+			for (String addr : configuration.get("Allow-proxy").replace(" ", "").split(",")) {
+				srv.addAllowedProxySources(addr);
+			}
+		}
+		if (configuration.containsKey("Allow-Proxy")) {
+			for (String addr : configuration.get("Allow-Proxy").replace(" ", "").split(",")) {
+				srv.addAllowedProxySources(addr);
+			}
+		}
+
+		// Return
+		return srv;
 	}
 
 	/**
@@ -178,6 +290,40 @@ public abstract class ConnectiveHttpServer {
 		if (adapter == null)
 			return null;
 		ConnectiveHttpServer srv = adapter.createServer(configuration);
+
+		// Update
+		if (configuration.containsKey("allowed-proxies")) {
+			for (String addr : configuration.get("allowed-proxies").replace(" ", "").split(",")) {
+				srv.addAllowedProxySources(addr);
+			}
+		}
+		if (configuration.containsKey("Allowed-proxies")) {
+			for (String addr : configuration.get("Allowed-proxies").replace(" ", "").split(",")) {
+				srv.addAllowedProxySources(addr);
+			}
+		}
+		if (configuration.containsKey("Allowed-Proxies")) {
+			for (String addr : configuration.get("Allowed-Proxies").replace(" ", "").split(",")) {
+				srv.addAllowedProxySources(addr);
+			}
+		}
+		if (configuration.containsKey("allow-proxy")) {
+			for (String addr : configuration.get("allow-proxy").replace(" ", "").split(",")) {
+				srv.addAllowedProxySources(addr);
+			}
+		}
+		if (configuration.containsKey("Allow-proxy")) {
+			for (String addr : configuration.get("Allow-proxy").replace(" ", "").split(",")) {
+				srv.addAllowedProxySources(addr);
+			}
+		}
+		if (configuration.containsKey("Allow-Proxy")) {
+			for (String addr : configuration.get("Allow-Proxy").replace(" ", "").split(",")) {
+				srv.addAllowedProxySources(addr);
+			}
+		}
+
+		// Return
 		if (srv instanceof NetworkedConnectiveHttpServer)
 			return (NetworkedConnectiveHttpServer) srv;
 		return null;
@@ -261,6 +407,62 @@ public abstract class ConnectiveHttpServer {
 				break;
 			}
 		}
+	}
+
+	/**
+	 * Registers a new request processor
+	 * 
+	 * @param path      The path to register to
+	 * @param processor Processor call
+	 */
+	public void registerProcessor(String path, LambdaRequestProcessor processor) {
+		registerProcessor(path, processor, false);
+	}
+
+	/**
+	 * Registers a new request processor
+	 * 
+	 * @param path               The path to register to
+	 * @param processor          Processor call
+	 * @param supportsChildPaths True to supports child paths, false otherwise
+	 */
+	public void registerProcessor(String path, LambdaRequestProcessor processor, boolean supportsChildPaths) {
+		registerProcessor(new DelegateRequestProcessor(path, processor, supportsChildPaths));
+	}
+
+	/**
+	 * Registers a new push processor
+	 * 
+	 * @param path      The path to register to
+	 * @param processor Processor call
+	 */
+	public void registerProcessor(String path, LambdaPushProcessor processor) {
+		registerProcessor(path, processor, false);
+	}
+
+	/**
+	 * Registers a new push processor
+	 * 
+	 * @param path               The path to register to
+	 * @param processor          Processor call
+	 * @param supportsChildPaths True to supports child paths, false otherwise
+	 */
+	public void registerProcessor(String path, LambdaPushProcessor processor, boolean supportsChildPaths) {
+		registerProcessor(path, processor, supportsChildPaths, false);
+	}
+
+	/**
+	 * Registers a new push processor
+	 * 
+	 * @param path               The path to register to
+	 * @param processor          Processor call
+	 * @param supportsChildPaths True to supports child paths, false otherwise
+	 * @param supportsNonPush    True to support non-upload requests, false
+	 *                           otherwise
+	 */
+	public void registerProcessor(String path, LambdaPushProcessor processor, boolean supportsChildPaths,
+			boolean supportsNonPush) {
+		registerProcessor(new DelegatePushProcessor(path, processor, supportsChildPaths, supportsNonPush));
 	}
 
 	/**
