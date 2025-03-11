@@ -36,7 +36,7 @@ public abstract class ConnectiveHttpServer {
 	/**
 	 * Version of the ConnectiveHTTP library
 	 */
-	public static final String CONNECTIVE_VERSION = "1.0.0.A16";
+	public static final String CONNECTIVE_VERSION = "1.0.0.A17";
 
 	private ContentSource contentSource = new DefaultContentSource();
 	private Logger logger = LogManager.getLogger("connective-http");

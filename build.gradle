@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "org.asf"
-version = "1.0.0.A16"
+version = "1.0.0.A17"
 
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
