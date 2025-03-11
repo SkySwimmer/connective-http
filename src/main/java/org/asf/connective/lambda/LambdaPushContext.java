@@ -34,7 +34,7 @@ public class LambdaPushContext {
 	 * 
 	 * @return Content type string
 	 */
-	protected String getContentType() {
+	public String getContentType() {
 		return contentType;
 	}
 
@@ -43,7 +43,7 @@ public class LambdaPushContext {
 	 * 
 	 * @return Stream that leads to the request content body
 	 */
-	protected InputStream getRequestBody() {
+	public InputStream getRequestBody() {
 		return getRequest().getBodyStream();
 	}
 
@@ -53,7 +53,7 @@ public class LambdaPushContext {
 	 * @return String representing the request body
 	 * @throws IOException If reading fails
 	 */
-	protected String getRequestBodyAsString() throws IOException {
+	public String getRequestBodyAsString() throws IOException {
 		return getRequest().getRequestBodyAsString();
 	}
 
@@ -64,7 +64,7 @@ public class LambdaPushContext {
 	 * @return String representing the request body
 	 * @throws IOException If reading fails
 	 */
-	protected String getRequestBodyAsString(String encoding) throws IOException {
+	public String getRequestBodyAsString(String encoding) throws IOException {
 		return getRequest().getRequestBodyAsString(encoding);
 	}
 
@@ -75,7 +75,7 @@ public class LambdaPushContext {
 	 * @return String representing the request body
 	 * @throws IOException If reading fails
 	 */
-	protected String getRequestBodyAsString(Charset encoding) throws IOException {
+	public String getRequestBodyAsString(Charset encoding) throws IOException {
 		return getRequest().getRequestBodyAsString(encoding);
 	}
 
@@ -85,7 +85,7 @@ public class LambdaPushContext {
 	 * @param output Target stream
 	 * @throws IOException If transferring fails
 	 */
-	protected void transferRequestBody(OutputStream output) throws IOException {
+	public void transferRequestBody(OutputStream output) throws IOException {
 		getRequest().transferRequestBody(output);
 	}
 
@@ -94,7 +94,7 @@ public class LambdaPushContext {
 	 * 
 	 * @return Request body length
 	 */
-	protected long getRequestBodyLength() {
+	public long getRequestBodyLength() {
 		return getRequest().getBodyLength();
 	}
 
