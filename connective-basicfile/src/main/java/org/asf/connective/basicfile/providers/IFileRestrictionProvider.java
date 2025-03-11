@@ -31,8 +31,8 @@ public interface IFileRestrictionProvider {
 
 	/**
 	 * Checks file access, false disconnects the client with a 403, true allows the
-	 * request.<br />
-	 * <br />
+	 * request.
+	 * 
 	 * <b>WARNING:</b> Windows paths are case-insensitive, make sure you keep that
 	 * in mind when writing a restriction provider!
 	 * 
