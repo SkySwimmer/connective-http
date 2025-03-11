@@ -6,6 +6,7 @@ import java.io.InputStream;
 
 import org.asf.connective.RemoteClient;
 import org.asf.connective.basicfile.providers.IndexPageProvider;
+import org.asf.connective.io.IoUtil;
 
 public class DefaultIndexPage extends IndexPageProvider {
 
@@ -22,8 +23,9 @@ public class DefaultIndexPage extends IndexPageProvider {
 			InputStream strm = getClass().getResource("/index.template.html").openStream();
 
 			// Process and set body
-			setResponseContent("text/html", process(new String(strm.readAllBytes(), "UTF-8"),
+			setResponseContent("text/html", process(new String(IoUtil.readAllBytes(strm), "UTF-8"),
 					getRequest().getRequestPath(), new File(getFolderPath()).getName(), null, directories, files));
+			strm.close();
 		} catch (IOException e) {
 		}
 	}

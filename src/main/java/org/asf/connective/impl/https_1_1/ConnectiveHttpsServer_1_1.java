@@ -66,7 +66,8 @@ public class ConnectiveHttpsServer_1_1 extends ConnectiveHttpServer_1_1 implemen
 				// Try to load
 				File keystorePassword = new File("keystore.jks.password");
 				if (keystorePassword.exists())
-					loadTlsContextFrom(keystore, Files.readString(keystorePassword.toPath()).toCharArray());
+					loadTlsContextFrom(keystore,
+							new String(Files.readAllBytes(keystorePassword.toPath()), "UTF-8").toCharArray());
 				else
 					throw new IOException(
 							"Default keystore file (keystore.jks) needs another file next to it named keystore.jks.password containing the keystore password for this to function.");

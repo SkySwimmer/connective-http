@@ -50,7 +50,7 @@ public class FileProviderContext {
 	 * @return Array of HttpPushProcessor instances
 	 */
 	public HttpPushProcessor[] getPushProcessors() {
-		return pushProcessors.toArray(t -> new HttpPushProcessor[t]);
+		return pushProcessors.toArray(new HttpPushProcessor[0]);
 	}
 
 	/**
@@ -59,7 +59,7 @@ public class FileProviderContext {
 	 * @return Array of HttpRequestProcessor instances
 	 */
 	public HttpRequestProcessor[] getRequestProcessors() {
-		return requestProcessors.toArray(t -> new HttpRequestProcessor[t]);
+		return requestProcessors.toArray(new HttpRequestProcessor[0]);
 	}
 
 	/**
@@ -68,7 +68,7 @@ public class FileProviderContext {
 	 * @return Array of IFileAliasProvider instances
 	 */
 	public IFileAliasProvider[] getAliases() {
-		return aliases.toArray(t -> new IFileAliasProvider[t]);
+		return aliases.toArray(new IFileAliasProvider[0]);
 	}
 
 	/**
@@ -77,7 +77,7 @@ public class FileProviderContext {
 	 * @return Array of FileUploadHandlerProvider instances
 	 */
 	public FileUploadHandlerProvider[] getUploadHandlers() {
-		return uploadHandlers.toArray(t -> new FileUploadHandlerProvider[t]);
+		return uploadHandlers.toArray(new FileUploadHandlerProvider[0]);
 	}
 
 	/**
@@ -86,7 +86,7 @@ public class FileProviderContext {
 	 * @return Array of IDocumentPostProcessorProvider instances
 	 */
 	public IDocumentPostProcessorProvider[] getPostProcessors() {
-		return postProcessors.toArray(t -> new IDocumentPostProcessorProvider[t]);
+		return postProcessors.toArray(new IDocumentPostProcessorProvider[0]);
 	}
 
 	/**
@@ -95,7 +95,7 @@ public class FileProviderContext {
 	 * @return Array of IFileExtensionProvider instances
 	 */
 	public IFileExtensionProvider[] getFileExtensions() {
-		return extensions.toArray(t -> new IFileExtensionProvider[t]);
+		return extensions.toArray(new IFileExtensionProvider[0]);
 	}
 
 	/**
@@ -104,7 +104,7 @@ public class FileProviderContext {
 	 * @return Array of IFileRestrictionProvider instances
 	 */
 	public IFileRestrictionProvider[] getRestrictions() {
-		return restrictions.toArray(t -> new IFileRestrictionProvider[t]);
+		return restrictions.toArray(new IFileRestrictionProvider[0]);
 	}
 
 	/**
@@ -113,7 +113,7 @@ public class FileProviderContext {
 	 * @return Array of IVirtualFileProvider instances
 	 */
 	public IVirtualFileProvider[] getVirtualFiles() {
-		return virtualFiles.toArray(t -> new IVirtualFileProvider[t]);
+		return virtualFiles.toArray(new IVirtualFileProvider[0]);
 	}
 
 	/**

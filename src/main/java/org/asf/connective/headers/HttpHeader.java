@@ -82,7 +82,7 @@ public class HttpHeader {
 	 * @return Array of header value strings
 	 */
 	public String[] getValues() {
-		return values.toArray(t -> new String[t]);
+		return values.toArray(new String[0]);
 	}
 
 	/**
@@ -129,7 +129,8 @@ public class HttpHeader {
 	 */
 	public String getValue(int index) {
 		if (index < 0 || index > values.size())
-			throw new IndexOutOfBoundsException(index);
+			throw new IndexOutOfBoundsException(
+					"Index out of bounds: " + index + ", size of collection: " + values.size());
 		return values.get(index);
 	}
 

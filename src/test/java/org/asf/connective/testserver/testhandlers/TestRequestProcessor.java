@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.asf.connective.RemoteClient;
+import org.asf.connective.io.IoUtil;
 import org.asf.connective.processors.HttpRequestProcessor;
 
 public class TestRequestProcessor extends HttpRequestProcessor {
@@ -44,9 +45,10 @@ public class TestRequestProcessor extends HttpRequestProcessor {
 				try {
 					InputStream strmI = getClass().getResource("/index.template.html").openStream();
 					setResponseContent("text/html",
-							process(new String(strmI.readAllBytes()), getRequestPath(), sourceFile.getName(), null,
-									sourceFile.listFiles(t -> t.isDirectory()),
+							process(new String(IoUtil.readAllBytes(strmI)), getRequestPath(), sourceFile.getName(),
+									null, sourceFile.listFiles(t -> t.isDirectory()),
 									sourceFile.listFiles(t -> !t.isDirectory())));
+					strmI.close();
 				} catch (IOException e) {
 					setResponseStatus(404, "Not found");
 				}

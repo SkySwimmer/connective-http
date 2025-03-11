@@ -3,7 +3,6 @@ package org.asf.connective.testserver.testhandlers;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 
 import javax.activation.FileTypeMap;
 import javax.activation.MimetypesFileTypeMap;
@@ -29,13 +28,13 @@ public class MainFileMap extends MimetypesFileTypeMap {
 		this.addMimeTypes("text/javascript	js");
 		if (new File(".mime.types").exists()) {
 			try {
-				this.addMimeTypes(Files.readString(Path.of(".mime.types")));
+				this.addMimeTypes(new String(Files.readAllBytes(new File(".mime.types").toPath()), "UTF-8"));
 			} catch (IOException e) {
 			}
 		}
 		if (new File("mime.types").exists()) {
 			try {
-				this.addMimeTypes(Files.readString(Path.of("mime.types")));
+				this.addMimeTypes(new String(Files.readAllBytes(new File("mime.types").toPath()), "UTF-8"));
 			} catch (IOException e) {
 			}
 		}

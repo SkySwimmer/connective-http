@@ -28,7 +28,7 @@ public class AsyncTaskManager {
 
 		synchronized (threads) {
 			// Check if a thread is available, if not, start a new one
-			AsyncTaskThreadHandler[] ths = threads.toArray(t -> new AsyncTaskThreadHandler[t]);
+			AsyncTaskThreadHandler[] ths = threads.toArray(new AsyncTaskThreadHandler[0]);
 			if (!Stream.of(ths).anyMatch(t -> t.isAvailable())) {
 				// Start new thread
 				AsyncTaskThreadHandler handler = new AsyncTaskThreadHandler();

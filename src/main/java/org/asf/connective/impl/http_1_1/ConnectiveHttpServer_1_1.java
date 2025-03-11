@@ -195,7 +195,7 @@ public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 		getLogger().debug("Disconnecting clients...");
 		RemoteClientHttp_1_1[] clientLst;
 		synchronized (clients) {
-			clientLst = clients.toArray(t -> new RemoteClientHttp_1_1[t]);
+			clientLst = clients.toArray(new RemoteClientHttp_1_1[0]);
 		}
 		for (RemoteClientHttp_1_1 client : clientLst) {
 			try {

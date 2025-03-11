@@ -640,7 +640,7 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 
 	@Override
 	public String[] getProxyChain() {
-		return proxies.toArray(t -> new String[t]);
+		return proxies.toArray(new String[0]);
 	}
 
 	@Override

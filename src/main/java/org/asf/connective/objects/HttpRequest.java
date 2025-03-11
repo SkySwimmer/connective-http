@@ -179,7 +179,7 @@ public class HttpRequest extends HttpObject {
 			}
 		} else {
 			// TODO: chunked content
-			body.transferTo(output);
+			IoUtil.transfer(body, output);
 		}
 	}
 

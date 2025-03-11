@@ -3,8 +3,9 @@ package org.asf.connective;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.ConcurrentModificationException;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 
@@ -20,6 +21,7 @@ import org.asf.connective.impl.DelegatePushProcessor;
 import org.asf.connective.impl.DelegateRequestProcessor;
 import org.asf.connective.impl.http_1_1.Http_1_1_Adapter;
 import org.asf.connective.impl.https_1_1.Https_1_1_Adapter;
+import org.asf.connective.io.IoUtil;
 import org.asf.connective.lambda.LambdaPushProcessor;
 import org.asf.connective.lambda.LambdaRequestProcessor;
 
@@ -34,7 +36,7 @@ public abstract class ConnectiveHttpServer {
 	/**
 	 * Version of the ConnectiveHTTP library
 	 */
-	public static final String CONNECTIVE_VERSION = "1.0.0.A15";
+	public static final String CONNECTIVE_VERSION = "1.0.0.A16";
 
 	private ContentSource contentSource = new DefaultContentSource();
 	private Logger logger = LogManager.getLogger("connective-http");
@@ -64,7 +66,7 @@ public abstract class ConnectiveHttpServer {
 	public String[] getAllowedProxySourceAddresses() {
 		while (true) {
 			try {
-				return allowedProxySourceAddresses.toArray(t -> new String[t]);
+				return allowedProxySourceAddresses.toArray(new String[0]);
 			} catch (ConcurrentModificationException e) {
 			}
 		}
@@ -123,7 +125,7 @@ public abstract class ConnectiveHttpServer {
 	 */
 	public HttpRequestProcessor[] getAllRequestProcessors() {
 		resortProcessorsIfNeeded();
-		return processors.toArray(t -> new HttpRequestProcessor[t]);
+		return processors.toArray(new HttpRequestProcessor[0]);
 	}
 
 	/**
@@ -146,7 +148,7 @@ public abstract class ConnectiveHttpServer {
 	}
 
 	private static ArrayList<IServerAdapterDefinition> adapters = new ArrayList<IServerAdapterDefinition>(
-			List.of(new Http_1_1_Adapter(), new Https_1_1_Adapter()));
+			Arrays.asList(new IServerAdapterDefinition[] { new Http_1_1_Adapter(), new Https_1_1_Adapter() }));
 
 	private BiFunction<HttpResponse, HttpRequest, String> errorGenerator = new BiFunction<HttpResponse, HttpRequest, String>() {
 		protected String htmlCache = null;
@@ -155,7 +157,8 @@ public abstract class ConnectiveHttpServer {
 		public String apply(HttpResponse response, HttpRequest request) {
 			try {
 				InputStream strm = getClass().getResource("/error.template.html").openStream();
-				htmlCache = new String(strm.readAllBytes());
+				htmlCache = new String(IoUtil.readAllBytes(strm));
+				strm.close();
 			} catch (Exception ex) {
 				if (htmlCache == null)
 					return "FATAL ERROR GENERATING PAGE: " + ex.getClass().getTypeName() + ": " + ex.getMessage();
@@ -213,7 +216,7 @@ public abstract class ConnectiveHttpServer {
 	public static IServerAdapterDefinition findAdapter(String adapterName) {
 		IServerAdapterDefinition[] adapterLst;
 		synchronized (adapters) {
-			adapterLst = adapters.toArray(t -> new IServerAdapterDefinition[t]);
+			adapterLst = adapters.toArray(new IServerAdapterDefinition[0]);
 		}
 		for (IServerAdapterDefinition adapter : adapterLst) {
 			if (adapter != null) {
@@ -232,7 +235,7 @@ public abstract class ConnectiveHttpServer {
 	 * @throws IllegalArgumentException If the configuration is invalid
 	 */
 	public static ConnectiveHttpServer create(String adapterName) throws IllegalArgumentException {
-		return create(adapterName, Map.of());
+		return create(adapterName, new HashMap<String, String>());
 	}
 
 	/**
@@ -294,7 +297,7 @@ public abstract class ConnectiveHttpServer {
 	 * @throws IllegalArgumentException If the configuration is invalid
 	 */
 	public static NetworkedConnectiveHttpServer createNetworked(String adapterName) throws IllegalArgumentException {
-		return createNetworked(adapterName, Map.of());
+		return createNetworked(adapterName, new HashMap<String, String>());
 	}
 
 	/**

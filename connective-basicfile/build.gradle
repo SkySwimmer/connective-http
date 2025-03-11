@@ -4,8 +4,11 @@ plugins {
 
 apply plugin: 'eclipse'
 
-sourceCompatibility = '1.11'
-targetCompatibility = '1.11'
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+
+group = "org.asf"
+version = "1.0.0.A16"
 
 repositories {
     mavenCentral()

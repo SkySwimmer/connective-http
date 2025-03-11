@@ -3,7 +3,6 @@ package org.asf.connective.basicfile;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -349,13 +348,13 @@ public class DocumentProcessor {
 			this.addMimeTypes("text/javascript	js");
 			if (new File(".mime.types").exists()) {
 				try {
-					this.addMimeTypes(Files.readString(Path.of(".mime.types")));
+					this.addMimeTypes(new String(Files.readAllBytes(new File(".mime.types").toPath()), "UTF-8"));
 				} catch (IOException e) {
 				}
 			}
 			if (new File("mime.types").exists()) {
 				try {
-					this.addMimeTypes(Files.readString(Path.of("mime.types")));
+					this.addMimeTypes(new String(Files.readAllBytes(new File("mime.types").toPath()), "UTF-8"));
 				} catch (IOException e) {
 				}
 			}

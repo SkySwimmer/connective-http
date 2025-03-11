@@ -70,7 +70,7 @@ public class ConnectiveServerTest {
 
 		URL u = new URL("http://localhost:" + testServer.getListenPort() + "/test?test=hi&test2=hello");
 		InputStream strm = u.openStream();
-		byte[] test = strm.readAllBytes();
+		byte[] test =IoUtil.readAllBytes(strm);
 		strm.close();
 		String outp = new String(test);
 
@@ -161,7 +161,7 @@ public class ConnectiveServerTest {
 
 		URL u = new URL("http://localhost:" + testServer.getListenPort() + "/test?test=hi&test2=hello");
 		InputStream strm = u.openStream();
-		byte[] test = strm.readAllBytes();
+		byte[] test = IoUtil.readAllBytes(strm);
 		strm.close();
 		String outp = new String(test);
 
@@ -206,7 +206,7 @@ public class ConnectiveServerTest {
 			int code = c.getResponseCode();
 			String msg = c.getResponseMessage();
 			if (code == 200) {
-				String resp = new String(c.getInputStream().readAllBytes());
+				String resp = new String(IoUtil.readAllBytes(c.getInputStream()));
 				c.disconnect();
 				assertTrue(resp.equals(str + "-test"));
 			} else {
@@ -255,7 +255,7 @@ public class ConnectiveServerTest {
 				output.write(IoUtil.readNBytes(bodyStream, tr));
 			}
 		} else {
-			bodyStream.transferTo(output);
+			IoUtil.transfer(bodyStream, output);
 		}
 	}
 }

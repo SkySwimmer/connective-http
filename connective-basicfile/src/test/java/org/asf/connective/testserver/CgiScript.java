@@ -11,6 +11,7 @@ import org.asf.connective.ConnectiveHttpServer;
 import org.asf.connective.NetworkedConnectiveHttpServer;
 import org.asf.connective.RemoteClient;
 import org.asf.connective.basicfile.FileProviderContext;
+import org.asf.connective.io.IoUtil;
 import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
 
@@ -249,7 +250,7 @@ public class CgiScript {
 					}
 					tr = input.available();
 				}
-				getInput().write(input.readNBytes(tr));
+				getInput().write(IoUtil.readNBytes(input, tr));
 			}
 
 			if (close) {

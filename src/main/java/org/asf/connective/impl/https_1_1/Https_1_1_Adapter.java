@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Map;
 
 import org.asf.connective.ConnectiveHttpServer;
@@ -60,7 +59,7 @@ public class Https_1_1_Adapter implements IServerAdapterDefinition {
 				// If still no password, find by file
 				String path = configuration.get("Keystore");
 				if (password == null && new File(path + ".password").exists())
-					password = Files.readString(Path.of(path + ".password")).toCharArray();
+					password = new String(Files.readAllBytes(new File(path + ".password").toPath())).toCharArray();
 				if (password == null)
 					throw new IllegalArgumentException(
 							"No keystore password found, assign the Keystore-Password configuration field to assign it");
@@ -87,7 +86,7 @@ public class Https_1_1_Adapter implements IServerAdapterDefinition {
 				// If still no password, find by file
 				String path = configuration.get("keystore");
 				if (password == null && new File(path + ".password").exists())
-					password = Files.readString(Path.of(path + ".password")).toCharArray();
+					password = new String(Files.readAllBytes(new File(path + ".password").toPath())).toCharArray();
 				if (password == null)
 					throw new IllegalArgumentException(
 							"No keystore password found, assign the Keystore-Password configuration field to assign it");

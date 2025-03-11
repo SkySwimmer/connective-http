@@ -135,7 +135,7 @@ public class HeaderCollection {
 	 * @return Array of HttpHeader instances
 	 */
 	public HttpHeader[] getHeaders() {
-		return headers.values().toArray(t -> new HttpHeader[t]);
+		return headers.values().toArray(new HttpHeader[0]);
 	}
 
 	/**
