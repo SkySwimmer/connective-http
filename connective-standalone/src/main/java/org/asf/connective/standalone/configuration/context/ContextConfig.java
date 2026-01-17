@@ -2,16 +2,16 @@ package org.asf.connective.standalone.configuration.context;
 
 import java.util.ArrayList;
 
-import org.asf.connective.processors.HttpRequestProcessor;
-import org.asf.connective.standalone.configuration.ProcessorConfig;
+import org.asf.connective.standalone.configuration.HandlerConfig;
 import org.asf.connective.basicfile.providers.*;
+import org.asf.connective.handlers.HttpRequestHandler;
 
 import groovy.lang.Closure;
 
 public class ContextConfig {
 
 	public String virtualRoot;
-	public ArrayList<HttpRequestProcessor> processors = new ArrayList<HttpRequestProcessor>();
+	public ArrayList<HttpRequestHandler> handlers = new ArrayList<HttpRequestHandler>();
 	public ArrayList<IFileAliasProvider> aliases = new ArrayList<IFileAliasProvider>();
 	public ArrayList<FileUploadHandlerProvider> uploadHandlers = new ArrayList<FileUploadHandlerProvider>();
 	public ArrayList<IDocumentPostProcessorProvider> postProcessors = new ArrayList<IDocumentPostProcessorProvider>();
@@ -27,21 +27,21 @@ public class ContextConfig {
 	}
 
 	/**
-	 * Configures server processors
+	 * Configures server handlers
 	 * 
-	 * @param processorConfigClosure Server processor configuration closure
+	 * @param handlerConfigClosure Server handler configuration closure
 	 */
-	public void ContextProcessors(Closure<?> processorConfigClosure) {
-		ContextProcessors(ProcessorConfig.fromClosure(processorConfigClosure));
+	public void ContextHandlers(Closure<?> handlerConfigClosure) {
+		ContextHandlers(HandlerConfig.fromClosure(handlerConfigClosure));
 	}
 
 	/**
-	 * Configures server processors
+	 * Configures server handlers
 	 * 
-	 * @param processorConfig Server processor configuration
+	 * @param handlerConfig Server handler configuration
 	 */
-	public void ContextProcessors(ProcessorConfig processorConfig) {
-		processors.addAll(processorConfig.processors);
+	public void ContextHandlers(HandlerConfig handlerConfig) {
+		handlers.addAll(handlerConfig.handlers);
 	}
 
 	/**

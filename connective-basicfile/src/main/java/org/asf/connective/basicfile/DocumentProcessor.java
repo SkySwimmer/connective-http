@@ -6,7 +6,6 @@ import java.nio.file.Files;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.util.ArrayList;
 import java.util.stream.Stream;
 
 import javax.activation.FileTypeMap;
@@ -28,8 +27,6 @@ import org.asf.connective.basicfile.providers.extensions.IRemoteClientProviderEx
 import org.asf.connective.basicfile.providers.extensions.IServerProviderExtension;
 import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
-import org.asf.connective.processors.HttpPushProcessor;
-import org.asf.connective.processors.HttpRequestProcessor;
 
 /**
  * 
@@ -407,123 +404,7 @@ public class DocumentProcessor {
 
 	private boolean handleRequestProcessors(String path, HttpRequest request, HttpResponse response,
 			RemoteClient client, ConnectiveHttpServer server) throws IOException {
-		// Load handlers
-		ArrayList<HttpRequestProcessor> reqProcessors = new ArrayList<HttpRequestProcessor>();
-		for (HttpRequestProcessor proc : context.getRequestProcessors())
-			reqProcessors.add(proc);
-		ArrayList<HttpPushProcessor> pushProcessors = new ArrayList<HttpPushProcessor>();
-		for (HttpPushProcessor proc : context.getPushProcessors())
-			pushProcessors.add(proc);
-		boolean compatible = false;
-		for (HttpPushProcessor proc : pushProcessors) {
-			if (proc.supportsNonPush()) {
-				reqProcessors.add(proc);
-			}
-		}
-
-		// Find handler
-		if (request.hasRequestBody()) {
-			HttpPushProcessor impl = null;
-			for (HttpPushProcessor proc : pushProcessors) {
-				if (!proc.supportsChildPaths()) {
-					String url = path;
-					if (!url.endsWith("/"))
-						url += "/";
-
-					String supportedURL = proc.path();
-					if (!supportedURL.endsWith("/"))
-						supportedURL += "/";
-
-					if (url.equals(supportedURL)) {
-						compatible = true;
-						impl = proc;
-						break;
-					}
-				}
-			}
-			if (!compatible) {
-				pushProcessors.sort((t1, t2) -> {
-					return -Integer.compare(sanitizePath(t1.path()).split("/").length,
-							sanitizePath(t2.path()).split("/").length);
-				});
-				for (HttpPushProcessor proc : pushProcessors) {
-					if (proc.supportsChildPaths()) {
-						String url = path;
-						if (!url.endsWith("/"))
-							url += "/";
-
-						String supportedURL = sanitizePath(proc.path());
-						if (!supportedURL.endsWith("/"))
-							supportedURL += "/";
-
-						if (url.startsWith(supportedURL)) {
-							compatible = true;
-							impl = proc;
-							break;
-						}
-					}
-				}
-			}
-			if (compatible) {
-				HttpPushProcessor processor = impl.instantiate(server, request, response);
-				provideDataTo(processor, client, server);
-				processor.process(path, request.getRequestMethod(), client, request.getHeaderValue("Content-Type"));
-
-				// Post-process
-				postProcessRequest(path, request, response, client, server);
-			}
-		} else {
-			HttpRequestProcessor impl = null;
-			for (HttpRequestProcessor proc : reqProcessors) {
-				if (!proc.supportsChildPaths()) {
-					String url = path;
-					if (!url.endsWith("/"))
-						url += "/";
-
-					String supportedURL = proc.path();
-					if (!supportedURL.endsWith("/"))
-						supportedURL += "/";
-
-					if (url.equals(supportedURL)) {
-						compatible = true;
-						impl = proc;
-						break;
-					}
-				}
-			}
-			if (!compatible) {
-				reqProcessors.sort((t1, t2) -> {
-					return -Integer.compare(sanitizePath(t1.path()).split("/").length,
-							sanitizePath(t2.path()).split("/").length);
-				});
-				for (HttpRequestProcessor proc : reqProcessors) {
-					if (proc.supportsChildPaths()) {
-						String url = path;
-						if (!url.endsWith("/"))
-							url += "/";
-
-						String supportedURL = sanitizePath(proc.path());
-						if (!supportedURL.endsWith("/"))
-							supportedURL += "/";
-
-						if (url.startsWith(supportedURL)) {
-							compatible = true;
-							impl = proc;
-							break;
-						}
-					}
-				}
-			}
-			if (compatible) {
-				HttpRequestProcessor processor = impl.instantiate(server, request, response);
-				provideDataTo(processor, client, server);
-				processor.process(path, request.getRequestMethod(), client);
-
-				// Post-process
-				postProcessRequest(path, request, response, client, server);
-			}
-		}
-		return compatible;
+		return context.getContentSource().process(path, request, response, client, server);
 	}
 
 	private void provideDataTo(Object obj, RemoteClient client, ConnectiveHttpServer server) {

@@ -7,13 +7,13 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.asf.connective.RemoteClient;
+import org.asf.connective.handlers.HttpRequestHandler;
 import org.asf.connective.io.IoUtil;
-import org.asf.connective.processors.HttpRequestProcessor;
 
-public class TestRequestProcessor extends HttpRequestProcessor {
+public class TestRequestProcessor extends HttpRequestHandler {
 
 	@Override
-	public HttpRequestProcessor createNewInstance() {
+	public HttpRequestHandler createNewInstance() {
 		return new TestRequestProcessor();
 	}
 
@@ -28,7 +28,7 @@ public class TestRequestProcessor extends HttpRequestProcessor {
 	}
 
 	@Override
-	public void process(String path, String method, RemoteClient client) {
+	public void handle(String path, String method, RemoteClient client) {
 		// Find file
 		File sourceFile = new File("root", path);
 		if (sourceFile.exists()) {

@@ -3,8 +3,8 @@ package org.asf.connective.basicfile;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import org.asf.connective.processors.HttpPushProcessor;
-import org.asf.connective.processors.HttpRequestProcessor;
+import org.asf.connective.ContentSource;
+import org.asf.connective.HandlerSetContentSource;
 import org.asf.connective.basicfile.impl.DefaultIndexPage;
 import org.asf.connective.basicfile.providers.FileUploadHandlerProvider;
 import org.asf.connective.basicfile.providers.IDocumentPostProcessorProvider;
@@ -13,6 +13,11 @@ import org.asf.connective.basicfile.providers.IFileExtensionProvider;
 import org.asf.connective.basicfile.providers.IFileRestrictionProvider;
 import org.asf.connective.basicfile.providers.IVirtualFileProvider;
 import org.asf.connective.basicfile.providers.IndexPageProvider;
+import org.asf.connective.handlers.DynamicHttpPushHandler;
+import org.asf.connective.handlers.DynamicHttpRequestHandler;
+import org.asf.connective.handlers.HttpHandlerSet;
+import org.asf.connective.handlers.HttpPushHandler;
+import org.asf.connective.handlers.HttpRequestHandler;
 
 /**
  * 
@@ -30,8 +35,8 @@ public class FileProviderContextFactory {
 	protected ArrayList<IFileRestrictionProvider> restrictions = new ArrayList<IFileRestrictionProvider>();
 	protected HashMap<String, IndexPageProvider> indexPages = new HashMap<String, IndexPageProvider>();
 	protected ArrayList<IVirtualFileProvider> virtualFiles = new ArrayList<IVirtualFileProvider>();
-	protected ArrayList<HttpRequestProcessor> requestProcessors = new ArrayList<HttpRequestProcessor>();
-	protected ArrayList<HttpPushProcessor> pushProcessors = new ArrayList<HttpPushProcessor>();
+	protected HttpHandlerSet processors = new HttpHandlerSet();
+	protected ContentSource source = new HandlerSetContentSource(processors);
 	protected IndexPageProvider defaultIndexPage = new DefaultIndexPage();
 	protected String fileSourceFolder = "root";
 
@@ -46,16 +51,24 @@ public class FileProviderContextFactory {
 	}
 
 	/**
+	 * Assigns the ContentSource instance used by the server
+	 * 
+	 * @param newSource New ContentSource instance to handle server requests, sets
+	 *                  the old content source as parent to the new content source
+	 * @since Connective 1.0.0.A17
+	 */
+	public void setContentSource(ContentSource newSource) {
+		newSource.unsafe().unsafeSetParent(newSource);
+		source = newSource;
+	}
+
+	/**
 	 * Registers a new push processor
 	 * 
 	 * @param processor The processor implementation to register
 	 */
-	public void registerProcessor(HttpPushProcessor processor) {
-		if (!pushProcessors.stream()
-				.anyMatch(t -> t.getClass().getTypeName().equals(processor.getClass().getTypeName())
-						&& t.supportsChildPaths() == processor.supportsChildPaths()
-						&& t.supportsNonPush() == processor.supportsNonPush() && t.path() == processor.path()))
-			pushProcessors.add(processor);
+	public void registerProcessor(DynamicHttpPushHandler processor) {
+		processors.registerHandler(processor);
 	}
 
 	/**
@@ -63,15 +76,26 @@ public class FileProviderContextFactory {
 	 * 
 	 * @param processor The processor implementation to register.
 	 */
-	public void registerProcessor(HttpRequestProcessor processor) {
-		if (processor instanceof HttpPushProcessor) {
-			registerProcessor((HttpPushProcessor) processor);
-			return;
-		}
-		if (!requestProcessors.stream()
-				.anyMatch(t -> t.getClass().getTypeName().equals(processor.getClass().getTypeName())
-						&& t.supportsChildPaths() == processor.supportsChildPaths() && t.path() == processor.path()))
-			requestProcessors.add(processor);
+	public void registerProcessor(DynamicHttpRequestHandler processor) {
+		processors.registerHandler(processor);
+	}
+
+	/**
+	 * Registers a new push processor
+	 * 
+	 * @param processor The processor implementation to register
+	 */
+	public void registerProcessor(HttpPushHandler processor) {
+		processors.registerHandler(processor);
+	}
+
+	/**
+	 * Registers a new request processor
+	 * 
+	 * @param processor The processor implementation to register.
+	 */
+	public void registerProcessor(HttpRequestHandler processor) {
+		processors.registerHandler(processor);
 	}
 
 	/**
@@ -169,8 +193,8 @@ public class FileProviderContextFactory {
 		FileProviderContext ctx = new FileProviderContext();
 		ctx.fileSourceFolder = fileSourceFolder;
 		ctx.defaultIndexPage = defaultIndexPage;
-		ctx.requestProcessors.addAll(requestProcessors);
-		ctx.pushProcessors.addAll(pushProcessors);
+		ctx.source = source;
+		ctx.processors = processors;
 		ctx.uploadHandlers.addAll(uploadHandlers);
 		ctx.postProcessors.addAll(postProcessors);
 		ctx.restrictions.addAll(restrictions);

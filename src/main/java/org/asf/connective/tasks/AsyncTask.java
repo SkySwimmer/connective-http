@@ -11,6 +11,8 @@ public class AsyncTask {
 	private Runnable action;
 	private boolean run;
 
+	private Object lock = new Object();
+
 	public AsyncTask(Runnable action) {
 		this.action = action;
 	}
@@ -19,7 +21,11 @@ public class AsyncTask {
 		try {
 			action.run();
 		} finally {
-			run = true;
+			// Release
+			synchronized (lock) {
+				run = true;
+				lock.notifyAll();
+			}
 		}
 	}
 
@@ -30,11 +36,15 @@ public class AsyncTask {
 	public void block() {
 		if (run)
 			return;
-		while (!run)
-			try {
-				Thread.sleep(1);
-			} catch (InterruptedException e) {
+		synchronized (lock) {
+			while (!run) {
+				try {
+					lock.wait();
+				} catch (InterruptedException e) {
+					break;
+				}
 			}
+		}
 	}
 
 }

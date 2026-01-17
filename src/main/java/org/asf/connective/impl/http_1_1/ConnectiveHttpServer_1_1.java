@@ -11,7 +11,7 @@ import java.util.ArrayList;
 
 import org.asf.connective.ConnectiveHttpServer;
 import org.asf.connective.NetworkedConnectiveHttpServer;
-import org.asf.connective.objects.HttpResponse;
+import org.asf.connective.logger.ConnectiveLogMessage;
 
 public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 
@@ -103,8 +103,8 @@ public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 			throw new IllegalStateException("Server already running!");
 
 		// Start server
-		getLogger().debug("Starting server on " + address.getHostAddress() + ", port " + port + "...");
-		resortProcessorsIfNeeded();
+		getLogger().debug(new ConnectiveLogMessage("startup",
+				"Starting server on " + address.getHostAddress() + ", port " + port + "...", null, null));
 		connected = true;
 		socket = getServerSocket(port, address);
 		serverThread = new Thread(() -> {
@@ -117,8 +117,7 @@ public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 					InputStream in = getClientInput(client);
 					OutputStream out = getClientOutput(client);
 
-					RemoteClientHttp_1_1 cl = new RemoteClientHttp_1_1(client, this, in, out,
-							(req) -> new HttpResponse("HTTP/1.1"));
+					RemoteClientHttp_1_1 cl = new RemoteClientHttp_1_1(client, this, in, out);
 					try {
 						synchronized (clients) {
 							clients.add(cl);
@@ -128,19 +127,21 @@ public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 						if (!connected)
 							break;
 
-						getLogger().error("Failed to handle messages from [" + cl.getRemoteAddress() + "]", ex);
+						cl.getLogger().error(new ConnectiveLogMessage("client",
+								"An error occurred while handling messages", ex, cl));
 					}
 				} catch (IOException ex) {
 					if (!connected)
 						break;
 
-					getLogger().error("Failed to handle client during handhsake", ex);
+					getLogger().error(new ConnectiveLogMessage("server", "An error occurred running the server thread",
+							ex, null));
 				}
 			}
 		}, "Connective server thread");
 		serverThread.setDaemon(true);
 		serverThread.start();
-		getLogger().debug("Server online, waiting for requests...");
+		getLogger().debug(new ConnectiveLogMessage("startup", "Server online, waiting for requests...", null, null));
 	}
 
 	@Override
@@ -150,7 +151,7 @@ public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 			return;
 
 		// Close server
-		getLogger().debug("Stopping server...");
+		getLogger().debug(new ConnectiveLogMessage("shutdown", "Stopping server...", null, null));
 		connected = false;
 		try {
 			socket.close();
@@ -158,7 +159,7 @@ public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 		}
 
 		// Wait for clients to disconnect
-		getLogger().debug("Waiting for clients to disconnect...");
+		getLogger().debug(new ConnectiveLogMessage("shutdown", "Waiting for clients to disconnect...", null, null));
 		while (true) {
 			int c;
 			synchronized (clients) {
@@ -174,7 +175,7 @@ public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 
 		// Unset server
 		socket = null;
-		getLogger().debug("HTTP server closed!");
+		getLogger().debug(new ConnectiveLogMessage("shutdown", "HTTP server closed!", null, null));
 	}
 
 	@Override
@@ -184,7 +185,7 @@ public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 			return;
 
 		// Disconnect
-		getLogger().debug("Stopping server...");
+		getLogger().debug(new ConnectiveLogMessage("shutdown", "Stopping server...", null, null));
 		connected = false;
 		try {
 			socket.close();
@@ -192,7 +193,7 @@ public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 		}
 
 		// Disconnect clients
-		getLogger().debug("Disconnecting clients...");
+		getLogger().debug(new ConnectiveLogMessage("shutdown", "Disconnecting clients...", null, null));
 		RemoteClientHttp_1_1[] clientLst;
 		synchronized (clients) {
 			clientLst = clients.toArray(new RemoteClientHttp_1_1[0]);
@@ -207,7 +208,7 @@ public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 
 		// Unset server
 		socket = null;
-		getLogger().debug("HTTP server closed!");
+		getLogger().debug(new ConnectiveLogMessage("shutdown", "HTTP server closed!", null, null));
 	}
 
 	@Override
@@ -218,6 +219,16 @@ public class ConnectiveHttpServer_1_1 extends NetworkedConnectiveHttpServer {
 	@Override
 	public String getProtocolName() {
 		return "HTTP/1.1";
+	}
+
+	@Override
+	public void waitForExit() {
+		if (!isRunning())
+			return;
+		try {
+			serverThread.join();
+		} catch (InterruptedException e) {
+		}
 	}
 
 }

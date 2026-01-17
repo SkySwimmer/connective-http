@@ -30,7 +30,7 @@ public class TestMain {
 
 	public static void main(String[] args) throws IOException {
 		NetworkedConnectiveHttpServer server = ConnectiveHttpServer.createNetworked("HTTP/1.1");
-		server.registerProcessor(new TestRequestProcessor());
+		server.registerHandler(new TestRequestProcessor());
 
 		// Create content source
 		BasicfileContentSource source = new BasicfileContentSource();

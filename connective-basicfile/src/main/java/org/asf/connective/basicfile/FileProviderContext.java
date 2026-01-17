@@ -3,9 +3,6 @@ package org.asf.connective.basicfile;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import org.asf.connective.processors.HttpPushProcessor;
-import org.asf.connective.processors.HttpRequestProcessor;
-
 import org.asf.connective.basicfile.providers.IFileAliasProvider;
 import org.asf.connective.basicfile.providers.FileUploadHandlerProvider;
 import org.asf.connective.basicfile.providers.IFileExtensionProvider;
@@ -13,6 +10,9 @@ import org.asf.connective.basicfile.providers.IDocumentPostProcessorProvider;
 import org.asf.connective.basicfile.providers.IFileRestrictionProvider;
 import org.asf.connective.basicfile.providers.IVirtualFileProvider;
 import org.asf.connective.basicfile.providers.IndexPageProvider;
+import org.asf.connective.handlers.HttpHandlerSet;
+import org.asf.connective.HandlerSetContentSource;
+import org.asf.connective.ContentSource;
 
 /**
  * 
@@ -30,8 +30,8 @@ public class FileProviderContext {
 	protected ArrayList<IFileRestrictionProvider> restrictions = new ArrayList<IFileRestrictionProvider>();
 	protected HashMap<String, IndexPageProvider> indexPages = new HashMap<String, IndexPageProvider>();
 	protected ArrayList<IVirtualFileProvider> virtualFiles = new ArrayList<IVirtualFileProvider>();
-	protected ArrayList<HttpRequestProcessor> requestProcessors = new ArrayList<HttpRequestProcessor>();
-	protected ArrayList<HttpPushProcessor> pushProcessors = new ArrayList<HttpPushProcessor>();
+	protected HttpHandlerSet processors = new HttpHandlerSet();
+	protected ContentSource source = new HandlerSetContentSource(processors);
 	protected IndexPageProvider defaultIndexPage = null;
 	protected String fileSourceFolder;
 
@@ -45,21 +45,23 @@ public class FileProviderContext {
 	}
 
 	/**
-	 * Retrieves the HTTP push processors registered in this context
+	 * Retrieves the HTTP request processor set
 	 * 
-	 * @return Array of HttpPushProcessor instances
+	 * @return HttpProcessorSet instance
+	 * @since Connective 1.0.0.A17
 	 */
-	public HttpPushProcessor[] getPushProcessors() {
-		return pushProcessors.toArray(new HttpPushProcessor[0]);
+	public HttpHandlerSet getProcessors() {
+		return processors;
 	}
 
 	/**
-	 * Retrieves the HTTP request processors registered in this context
+	 * Retrieves the fallback content source
 	 * 
-	 * @return Array of HttpRequestProcessor instances
+	 * @return Fallback ContentSource instance
+	 * @since Connective 1.0.0.A17
 	 */
-	public HttpRequestProcessor[] getRequestProcessors() {
-		return requestProcessors.toArray(new HttpRequestProcessor[0]);
+	public ContentSource getContentSource() {
+		return source;
 	}
 
 	/**

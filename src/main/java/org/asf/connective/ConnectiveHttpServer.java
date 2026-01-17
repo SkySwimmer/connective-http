@@ -9,21 +9,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
+import org.asf.connective.handlers.HttpHandlerSet;
 import org.asf.connective.headers.HeaderCollection;
 import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
-import org.asf.connective.processors.HttpPushProcessor;
-import org.asf.connective.processors.HttpRequestProcessor;
-import org.asf.connective.impl.DelegatePushProcessor;
-import org.asf.connective.impl.DelegateRequestProcessor;
 import org.asf.connective.impl.http_1_1.Http_1_1_Adapter;
 import org.asf.connective.impl.https_1_1.Https_1_1_Adapter;
 import org.asf.connective.io.IoUtil;
-import org.asf.connective.lambda.LambdaPushProcessor;
-import org.asf.connective.lambda.LambdaRequestProcessor;
+import org.asf.connective.logger.ConnectiveLogger;
+import org.asf.connective.logger.ConnectiveLoggerManager;
 
 /**
  * 
@@ -32,20 +26,27 @@ import org.asf.connective.lambda.LambdaRequestProcessor;
  * @author Sky Swimmer
  *
  */
-public abstract class ConnectiveHttpServer {
+public abstract class ConnectiveHttpServer extends HttpHandlerSet {
 	/**
 	 * Version of the ConnectiveHTTP library
 	 */
 	public static final String CONNECTIVE_VERSION = "1.0.0.A17";
 
-	private ContentSource contentSource = new DefaultContentSource();
-	private Logger logger = LogManager.getLogger("connective-http");
+	static class LayerInfo {
+		public IHttpHandlerLayer proc;
+		public LayerInfo parent;
+	}
+
+	LayerInfo layer = null;
+	private ContentSource contentSource = new DefaultContentSource(this);
+
+	private ConnectiveLogger logger;
 	private HeaderCollection defaultHeaders = new HeaderCollection();
 
-	protected boolean processorsRequiresResort;
-	protected ArrayList<HttpRequestProcessor> processors = new ArrayList<HttpRequestProcessor>();
-
 	protected ArrayList<String> allowedProxySourceAddresses = new ArrayList<String>();
+
+	private static ArrayList<IServerAdapterDefinition> adapters = new ArrayList<IServerAdapterDefinition>(
+			Arrays.asList(new IServerAdapterDefinition[] { new Http_1_1_Adapter(), new Https_1_1_Adapter() }));
 
 	public ConnectiveHttpServer() {
 		// Proxies
@@ -55,6 +56,16 @@ public abstract class ConnectiveHttpServer {
 			addAllowedProxySources(addr);
 		for (String addr : System.getProperty("connectiveGrantProxies", "").replace(" ", "").split(","))
 			addAllowedProxySources(addr);
+		logger = ConnectiveLoggerManager.getInstance().getLogger("server");
+	}
+
+	/**
+	 * Reassigns the logger implementation
+	 * 
+	 * @param logger New ConnectiveLogger instance
+	 */
+	public void setLogger(ConnectiveLogger logger) {
+		this.logger = logger;
 	}
 
 	/**
@@ -70,6 +81,35 @@ public abstract class ConnectiveHttpServer {
 			} catch (ConcurrentModificationException e) {
 			}
 		}
+	}
+
+	/**
+	 * Adds HTTP handler layers
+	 * 
+	 * @param layer Layer to add
+	 * @since Connective 1.0.0.A17
+	 */
+	public void addHandlerLayer(IHttpHandlerLayer layer) {
+		LayerInfo l = new LayerInfo();
+		l.proc = layer;
+		l.parent = this.layer;
+		this.layer = l;
+	}
+
+	/**
+	 * Retrieves all handler layers
+	 * 
+	 * @return Array of IHttpHandlerLayer instances
+	 * @since Connective 1.0.0.A17
+	 */
+	public IHttpHandlerLayer[] getHandlerLayer() {
+		ArrayList<IHttpHandlerLayer> handlers = new ArrayList<IHttpHandlerLayer>();
+		LayerInfo l = layer;
+		while (l != null) {
+			handlers.add(l.proc);
+			l = l.parent;
+		}
+		return handlers.toArray(new IHttpHandlerLayer[0]);
 	}
 
 	/**
@@ -117,38 +157,6 @@ public abstract class ConnectiveHttpServer {
 			allowedProxySourceAddresses.clear();
 		}
 	}
-
-	/**
-	 * Retrieves all registered HTTP request processors
-	 * 
-	 * @return Array of HttpRequestProcessor instances
-	 */
-	public HttpRequestProcessor[] getAllRequestProcessors() {
-		resortProcessorsIfNeeded();
-		return processors.toArray(new HttpRequestProcessor[0]);
-	}
-
-	/**
-	 * @deprecated No longer supported, use getAllRequestProcessors() instead
-	 */
-	@Deprecated
-	public HttpPushProcessor[] getRequestProcessors() {
-		resortProcessorsIfNeeded();
-		return processors.stream().filter(t -> !(t instanceof HttpPushProcessor))
-				.toArray(t -> new HttpPushProcessor[t]);
-	}
-
-	/**
-	 * @deprecated No longer supported, use getAllRequestProcessors() instead
-	 */
-	@Deprecated
-	public HttpPushProcessor[] getPushProcessors() {
-		resortProcessorsIfNeeded();
-		return processors.stream().filter(t -> t instanceof HttpPushProcessor).toArray(t -> new HttpPushProcessor[t]);
-	}
-
-	private static ArrayList<IServerAdapterDefinition> adapters = new ArrayList<IServerAdapterDefinition>(
-			Arrays.asList(new IServerAdapterDefinition[] { new Http_1_1_Adapter(), new Https_1_1_Adapter() }));
 
 	private BiFunction<HttpResponse, HttpRequest, String> errorGenerator = new BiFunction<HttpResponse, HttpRequest, String>() {
 		protected String htmlCache = null;
@@ -356,9 +364,9 @@ public abstract class ConnectiveHttpServer {
 	/**
 	 * Retrieves the client logger
 	 * 
-	 * @return Logger instance
+	 * @return ConnectiveLogger instance
 	 */
-	protected Logger getLogger() {
+	protected ConnectiveLogger getLogger() {
 		return logger;
 	}
 
@@ -423,105 +431,7 @@ public abstract class ConnectiveHttpServer {
 	/**
 	 * Waits for the server to shut down
 	 */
-	public void waitForExit() {
-		while (isRunning()) {
-			try {
-				Thread.sleep(100);
-			} catch (InterruptedException e) {
-				break;
-			}
-		}
-	}
-
-	/**
-	 * Registers a new request processor
-	 * 
-	 * @param path      The path to register to
-	 * @param processor Processor call
-	 */
-	public void registerProcessor(String path, LambdaRequestProcessor processor) {
-		registerProcessor(path, processor, false);
-	}
-
-	/**
-	 * Registers a new request processor
-	 * 
-	 * @param path               The path to register to
-	 * @param processor          Processor call
-	 * @param supportsChildPaths True to supports child paths, false otherwise
-	 */
-	public void registerProcessor(String path, LambdaRequestProcessor processor, boolean supportsChildPaths) {
-		registerProcessor(new DelegateRequestProcessor(path, processor, supportsChildPaths));
-	}
-
-	/**
-	 * Registers a new push processor
-	 * 
-	 * @param path      The path to register to
-	 * @param processor Processor call
-	 */
-	public void registerProcessor(String path, LambdaPushProcessor processor) {
-		registerProcessor(path, processor, false);
-	}
-
-	/**
-	 * Registers a new push processor
-	 * 
-	 * @param path               The path to register to
-	 * @param processor          Processor call
-	 * @param supportsChildPaths True to supports child paths, false otherwise
-	 */
-	public void registerProcessor(String path, LambdaPushProcessor processor, boolean supportsChildPaths) {
-		registerProcessor(path, processor, supportsChildPaths, false);
-	}
-
-	/**
-	 * Registers a new push processor
-	 * 
-	 * @param path               The path to register to
-	 * @param processor          Processor call
-	 * @param supportsChildPaths True to supports child paths, false otherwise
-	 * @param supportsNonPush    True to support non-upload requests, false
-	 *                           otherwise
-	 */
-	public void registerProcessor(String path, LambdaPushProcessor processor, boolean supportsChildPaths,
-			boolean supportsNonPush) {
-		registerProcessor(new DelegatePushProcessor(path, processor, supportsChildPaths, supportsNonPush));
-	}
-
-	/**
-	 * Registers a new push processor
-	 * 
-	 * @param processor The processor implementation to register
-	 */
-	public void registerProcessor(HttpPushProcessor processor) {
-		if (!processors.stream()
-				.anyMatch(t -> t instanceof HttpPushProcessor
-						&& t.getClass().getTypeName().equals(processor.getClass().getTypeName())
-						&& t.supportsChildPaths() == processor.supportsChildPaths()
-						&& ((HttpPushProcessor) t).supportsNonPush() == processor.supportsNonPush()
-						&& t.path() == processor.path())) {
-			processors.add(processor);
-			processorsRequiresResort = true;
-		}
-	}
-
-	/**
-	 * Registers a new request processor
-	 * 
-	 * @param processor The processor implementation to register.
-	 */
-	public void registerProcessor(HttpRequestProcessor processor) {
-		if (processor instanceof HttpPushProcessor) {
-			registerProcessor((HttpPushProcessor) processor);
-			return;
-		}
-		if (!processors.stream().anyMatch(t -> t.getClass().getTypeName().equals(processor.getClass().getTypeName())
-				&& t.supportsChildPaths() == processor.supportsChildPaths() && t.path() == processor.path())) {
-			processors.add(processor);
-			processorsRequiresResort = true;
-		}
-	}
+	public abstract void waitForExit();
 
 	/**
 	 * Retrieves the error page generator
@@ -547,33 +457,5 @@ public abstract class ConnectiveHttpServer {
 	 * @return Server protocol name
 	 */
 	public abstract String getProtocolName();
-
-	/**
-	 * Re-sorts all processors, required to properly process requests
-	 */
-	protected void resortProcessorsIfNeeded() {
-		if (processorsRequiresResort) {
-			// Resort
-			processors.sort((t1, t2) -> {
-				return -Integer.compare(sanitizePath(t1.path()).split("/").length,
-						sanitizePath(t2.path()).split("/").length);
-			});
-		}
-		processorsRequiresResort = false;
-	}
-
-	private String sanitizePath(String path) {
-		if (path.contains("\\"))
-			path = path.replace("\\", "/");
-		while (path.startsWith("/"))
-			path = path.substring(1);
-		while (path.endsWith("/"))
-			path = path.substring(0, path.length() - 1);
-		while (path.contains("//"))
-			path = path.replace("//", "/");
-		if (!path.startsWith("/"))
-			path = "/" + path;
-		return path;
-	}
 
 }

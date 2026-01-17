@@ -3,8 +3,8 @@ package org.asf.connective;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import org.asf.connective.handlers.*;
 import org.asf.connective.io.IoUtil;
-import org.asf.connective.processors.*;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -32,7 +32,7 @@ public class ConnectiveServerTest {
 		return txt;
 	}
 
-	class TestProc extends HttpPushProcessor {
+	class TestProc extends HttpPushHandler {
 
 		@Override
 		public String path() {
@@ -40,17 +40,18 @@ public class ConnectiveServerTest {
 		}
 
 		@Override
-		public void process(String path, String method, RemoteClient client, String contentType) throws IOException {
+		public void handle(String path, String method, RemoteClient client, String contentType) throws IOException {
 			getResponse().addHeader("Connection", "Keep-Alive");
-			if (contentType != null)
-				setResponseContent(getRequestBodyAsString() + "-test");
-			else {
+			if (contentType != null) {
+				byte[] data = IoUtil.readAllBytes(getRequest().getBodyStream());
+				setResponseContent(new String(data, "UTF-8") + "-test");
+			} else {
 				setResponseContent("12345");
 			}
 		}
 
 		@Override
-		public HttpPushProcessor createNewInstance() {
+		public HttpPushHandler createNewInstance() {
 			return new TestProc();
 		}
 
@@ -66,11 +67,11 @@ public class ConnectiveServerTest {
 		NetworkedConnectiveHttpServer testServer = ConnectiveHttpServer.createNetworked("HTTP/1.1");
 		testServer.setListenPort(12345);
 		testServer.start();
-		testServer.registerProcessor(new TestProc());
+		testServer.registerHandler(new TestProc());
 
 		URL u = new URL("http://localhost:" + testServer.getListenPort() + "/test?test=hi&test2=hello");
 		InputStream strm = u.openStream();
-		byte[] test =IoUtil.readAllBytes(strm);
+		byte[] test = IoUtil.readAllBytes(strm);
 		strm.close();
 		String outp = new String(test);
 
@@ -157,7 +158,7 @@ public class ConnectiveServerTest {
 		NetworkedConnectiveHttpServer testServer = ConnectiveHttpServer.createNetworked("HTTP/1.1");
 		testServer.setListenPort(12345);
 		testServer.start();
-		testServer.registerProcessor(new TestProc());
+		testServer.registerHandler(new TestProc());
 
 		URL u = new URL("http://localhost:" + testServer.getListenPort() + "/test?test=hi&test2=hello");
 		InputStream strm = u.openStream();
@@ -174,7 +175,7 @@ public class ConnectiveServerTest {
 		NetworkedConnectiveHttpServer testServer = ConnectiveHttpServer.createNetworked("HTTP/1.1");
 		testServer.setListenPort(12345);
 		testServer.start();
-		testServer.registerProcessor(new TestProc());
+		testServer.registerHandler(new TestProc());
 
 		URL u = new URL("http://localhost:" + testServer.getListenPort() + "/%YE");
 		HttpURLConnection conn = (HttpURLConnection) u.openConnection();
@@ -190,7 +191,7 @@ public class ConnectiveServerTest {
 	public void postTest() throws IOException {
 		NetworkedConnectiveHttpServer testServer = ConnectiveHttpServer.createNetworked("HTTP/1.1");
 		testServer.setListenPort(12345);
-		testServer.registerProcessor(new TestProc());
+		testServer.registerHandler(new TestProc());
 		String str = genText();
 		testServer.start();
 

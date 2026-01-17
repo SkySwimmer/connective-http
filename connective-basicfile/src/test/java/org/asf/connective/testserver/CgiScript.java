@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 import org.asf.connective.ConnectiveHttpServer;
@@ -12,6 +13,7 @@ import org.asf.connective.NetworkedConnectiveHttpServer;
 import org.asf.connective.RemoteClient;
 import org.asf.connective.basicfile.FileProviderContext;
 import org.asf.connective.io.IoUtil;
+import org.asf.connective.io.PrependedBufferStream;
 import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
 
@@ -100,7 +102,7 @@ public class CgiScript {
 	 */
 	public static class CgiContext {
 		protected Process cgiProcess;
-		protected InputStream output;
+		protected PrependedBufferStream output;
 		protected OutputStream input;
 		protected ArrayList<CgiContentProvider> contentProviders;
 
@@ -111,7 +113,7 @@ public class CgiScript {
 		/**
 		 * The CGI script's STDOUT
 		 */
-		public InputStream getOutput() {
+		public PrependedBufferStream getOutput() {
 			return output;
 		}
 
@@ -261,16 +263,65 @@ public class CgiScript {
 			return this;
 		}
 
-		private String readStreamLine(InputStream strm) throws IOException {
-			String buffer = "";
-			while (true) {
-				char ch = (char) strm.read();
-				if (ch == (char) -1)
-					return buffer;
-				if (ch == '\n') {
-					return buffer;
-				} else if (ch != '\r') {
-					buffer += ch;
+		private String readStreamLine(PrependedBufferStream strm) throws IOException {
+			// Read a number of bytes
+			byte[] content = new byte[20480];
+			int read = strm.read(content, 0, content.length);
+			if (read <= -1) {
+				// Failed
+				return null;
+			} else {
+				// Trim array
+				content = Arrays.copyOfRange(content, 0, read);
+
+				// Find newline
+				String newData = new String(content, "UTF-8");
+				if (newData.contains("\n")) {
+					// Found newline
+					String line = newData.substring(0, newData.indexOf("\n"));
+					int offset = line.length() + 1;
+					int returnLength = content.length - offset;
+					if (returnLength > 0) {
+						// Return
+						strm.returnToBuffer(Arrays.copyOfRange(content, offset, content.length));
+					}
+					return line.replace("\r", "");
+				} else {
+					// Read more
+					while (true) {
+						byte[] addition = new byte[20480];
+						read = strm.read(addition, 0, addition.length);
+						if (read <= -1) {
+							// Failed
+							strm.returnToBuffer(content);
+							return null;
+						}
+
+						// Trim
+						addition = Arrays.copyOfRange(addition, 0, read);
+
+						// Append
+						byte[] newContent = new byte[content.length + addition.length];
+						for (int i = 0; i < content.length; i++)
+							newContent[i] = content[i];
+						for (int i = content.length; i < newContent.length; i++)
+							newContent[i] = addition[i - content.length];
+						content = newContent;
+
+						// Find newline
+						newData = new String(content, "UTF-8");
+						if (newData.contains("\n")) {
+							// Found newline
+							String line = newData.substring(0, newData.indexOf("\n"));
+							int offset = line.length() + 1;
+							int returnLength = content.length - offset;
+							if (returnLength > 0) {
+								// Return
+								strm.returnToBuffer(Arrays.copyOfRange(content, offset, content.length));
+							}
+							return line.replace("\r", "");
+						}
+					}
 				}
 			}
 		}
@@ -455,7 +506,7 @@ public class CgiScript {
 		Process proc = builder.start();
 		context.cgiProcess = proc;
 		context.input = proc.getOutputStream();
-		context.output = proc.getInputStream();
+		context.output = new PrependedBufferStream(proc.getInputStream());
 
 		return context;
 	}

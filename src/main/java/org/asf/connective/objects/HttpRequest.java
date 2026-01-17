@@ -1,5 +1,6 @@
 package org.asf.connective.objects;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,6 +12,7 @@ import java.util.Map;
 
 import org.asf.connective.headers.HeaderCollection;
 import org.asf.connective.io.IoUtil;
+import org.asf.connective.io.LengthLimitedStream;
 
 /**
  * 
@@ -29,6 +31,8 @@ public class HttpRequest extends HttpObject {
 	private String requestPath;
 	private String requestQuery;
 
+	private boolean streamTouched;
+
 	private LinkedHashMap<String, String> queryParameters = new LinkedHashMap<String, String>();
 
 	/**
@@ -45,6 +49,8 @@ public class HttpRequest extends HttpObject {
 	public HttpRequest(InputStream body, long bodyContentLength, HeaderCollection headers, String httpVersion,
 			String requestMethod, String requestResource) throws IllegalArgumentException {
 		this.body = body;
+		if (bodyContentLength > -1)
+			this.body = new LengthLimitedStream(body, false, bodyContentLength);
 		this.bodyContentLength = bodyContentLength;
 		this.headers = headers;
 		this.httpVersion = httpVersion;
@@ -75,8 +81,11 @@ public class HttpRequest extends HttpObject {
 				requestPath = requestPath.substring(0, requestPath.length() - 1);
 			while (requestPath.contains("//"))
 				requestPath = requestPath.replace("//", "/");
-			if (!requestPath.startsWith("/"))
-				requestPath = "/" + requestPath;
+			requestPath = "/" + requestPath;
+
+			// Clean result
+			requestResource = requestPath + (requestQuery.isEmpty() ? "" : "?" + requestQuery);
+			this.requestResource = requestResource;
 		} catch (Exception e) {
 			// Malformed
 			throw new IllegalArgumentException("Malformed request");
@@ -163,24 +172,21 @@ public class HttpRequest extends HttpObject {
 		if (body == null)
 			return;
 		if (bodyContentLength > -1) {
-			long length = bodyContentLength;
-			int tr = 0;
-			for (long i = 0; i < length; i += tr) {
-				tr = 1000;
-				if ((length - (long) i) < tr) {
-					tr = body.available();
-					if (tr == 0) {
-						output.write(body.read());
-						i += 1;
-					}
-					tr = body.available();
-				}
-				output.write(IoUtil.readNBytes(body, tr));
+			long len = bodyContentLength;
+			while (len > 0) {
+				int length = len > 20480 ? 20480 : (int) len;
+				byte[] buf = new byte[length];
+				int i = body.read(buf, 0, buf.length);
+				if (i == -1)
+					break;
+				len -= i;
+				output.write(buf, 0, i);
 			}
 		} else {
-			// TODO: chunked content
+			// TODO: chunked content support
 			IoUtil.transfer(body, output);
 		}
+		streamTouched = true;
 	}
 
 	/**
@@ -230,12 +236,14 @@ public class HttpRequest extends HttpObject {
 
 	@Override
 	public InputStream getBodyStream() {
-		if (bodyStr != null)
-			throw new IllegalStateException("This method cannot be used if getRequestBodyAsString() is called");
+		if (bodyData != null)
+			return new ByteArrayInputStream(bodyData);
+		if (body != null)
+			streamTouched = true;
 		return body;
 	}
 
-	private String bodyStr;
+	private byte[] bodyData;
 
 	/**
 	 * Retrieves the body content as string
@@ -244,12 +252,7 @@ public class HttpRequest extends HttpObject {
 	 * @throws IOException If reading fails
 	 */
 	public String getRequestBodyAsString() throws IOException {
-		if (bodyStr != null)
-			return bodyStr;
-		ByteArrayOutputStream strm = new ByteArrayOutputStream();
-		transferRequestBody(strm);
-		bodyStr = new String(strm.toByteArray(), "UTF-8");
-		return bodyStr;
+		return new String(getRequestBodyBytes(), "UTF-8");
 	}
 
 	/**
@@ -260,12 +263,7 @@ public class HttpRequest extends HttpObject {
 	 * @throws IOException If reading fails
 	 */
 	public String getRequestBodyAsString(String encoding) throws IOException {
-		if (bodyStr != null)
-			return bodyStr;
-		ByteArrayOutputStream strm = new ByteArrayOutputStream();
-		transferRequestBody(strm);
-		bodyStr = new String(strm.toByteArray(), encoding);
-		return bodyStr;
+		return new String(getRequestBodyBytes(), encoding);
 	}
 
 	/**
@@ -276,17 +274,38 @@ public class HttpRequest extends HttpObject {
 	 * @throws IOException If reading fails
 	 */
 	public String getRequestBodyAsString(Charset encoding) throws IOException {
-		if (bodyStr != null)
-			return bodyStr;
+		return new String(getRequestBodyBytes(), encoding);
+
+	}
+
+	/**
+	 * Retrieves the body content as a byte array
+	 * 
+	 * @return Byte array representing the request body
+	 * @throws IOException If reading fails
+	 */
+	public byte[] getRequestBodyBytes() throws IOException {
+		if (bodyData != null)
+			return bodyData;
 		ByteArrayOutputStream strm = new ByteArrayOutputStream();
 		transferRequestBody(strm);
-		bodyStr = new String(strm.toByteArray(), encoding);
-		return bodyStr;
+		bodyData = strm.toByteArray();
+		return bodyData;
 	}
 
 	@Override
 	public String toString() {
 		return requestMethod + " " + requestResource;
+	}
+
+	/**
+	 * Checks if the body stream was touched
+	 * 
+	 * @return True if the body stream was touched (eg. used by a handler), false
+	 *         otherwise
+	 */
+	public boolean wasBodyStreamTouched() {
+		return streamTouched;
 	}
 
 }

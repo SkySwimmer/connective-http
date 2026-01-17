@@ -5,12 +5,12 @@ import java.io.File;
 import java.io.FileInputStream;
 
 import org.asf.connective.RemoteClient;
-import org.asf.connective.processors.HttpRequestProcessor;
 import org.asf.connective.basicfile.FileProviderContext;
 import org.asf.connective.basicfile.FileProviderContextFactory;
 import org.asf.connective.basicfile.providers.IndexPageProvider;
+import org.asf.connective.handlers.HttpRequestHandler;
 
-public class TestRequestProcessor extends HttpRequestProcessor {
+public class TestRequestProcessor extends HttpRequestHandler {
 
 	private static FileProviderContext ctx;
 	static {
@@ -24,7 +24,7 @@ public class TestRequestProcessor extends HttpRequestProcessor {
 	}
 
 	@Override
-	public HttpRequestProcessor createNewInstance() {
+	public HttpRequestHandler createNewInstance() {
 		return new TestRequestProcessor();
 	}
 
@@ -34,7 +34,7 @@ public class TestRequestProcessor extends HttpRequestProcessor {
 	}
 
 	@Override
-	public void process(String path, String method, RemoteClient client) throws IOException {
+	public void handle(String path, String method, RemoteClient client) throws IOException {
 		// Index page test
 		File f = new File(".", getRequestPath());
 		if (!f.exists()) {

@@ -1,4 +1,4 @@
-package org.asf.connective.processors;
+package org.asf.connective.handlers;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,16 +12,48 @@ import org.asf.connective.objects.HttpResponse;
 
 /**
  * 
- * HTTP Upload Processor
+ * HTTP Upload Handler with fallthrough
  * 
  * @author Sky Swimmer
+ * @since Connective 1.0.0.A17
  *
  */
-public abstract class HttpPushProcessor extends HttpRequestProcessor {
+public abstract class DynamicHttpPushHandler extends DynamicHttpRequestHandler {
 
 	@Override
-	public void process(String path, String method, RemoteClient client) throws IOException {
-		process(path, method, client, null);
+	public String[] methods() {
+		if (supportsNonPush())
+			return new String[] { "GET", "PUT", "POST" };
+		else
+			return new String[] { "PUT", "POST" };
+	}
+
+	/**
+	 * Called to verify the request processor against the HTTP resource prior to
+	 * running it, returning false will fall through to the following request
+	 * handler
+	 * 
+	 * @param path        Request path
+	 * @param method      Request method
+	 * @param client      Remote client
+	 * @param contentType Body content type
+	 * @throws IOException If processing fails
+	 * @return True if handled, false otherwise, return false to fall through to the
+	 *         next handler
+	 * @throws IOException
+	 */
+	public boolean match(String path, String method, RemoteClient client, String contentType) throws IOException {
+		return true;
+	}
+
+	@Override
+	public boolean match(String path, String method, RemoteClient client) throws IOException {
+		return match(path, method, client, null);
+	}
+
+	@Override
+	public boolean handleRequest(String path, String method, RemoteClient client) throws IOException {
+		return handleRequest(path, method, client, null);
 	}
 
 	/**
@@ -85,21 +117,21 @@ public abstract class HttpPushProcessor extends HttpRequestProcessor {
 	}
 
 	/**
-	 * Instantiates a new processor with the server, request and response
+	 * Instantiates a new handler with the server, request and response
 	 * 
 	 * @param server   Server to use
 	 * @param request  HTTP request
 	 * @param response HTTP response
-	 * @return New HttpGetProcessor configured for processing
+	 * @return New DynamicHttpPushHandler configured for processing
 	 */
-	public HttpPushProcessor instantiate(ConnectiveHttpServer server, HttpRequest request, HttpResponse response) {
-		return (HttpPushProcessor) super.instantiate(server, request, response);
+	public DynamicHttpPushHandler instantiate(ConnectiveHttpServer server, HttpRequest request, HttpResponse response) {
+		return (DynamicHttpPushHandler) super.instantiate(server, request, response);
 	}
 
 	/**
-	 * Checks if the processor support non-push requests, false by default
+	 * Checks if the handler support non-push requests, false by default
 	 * 
-	 * @return True if the processor supports this, false otherwise
+	 * @return True if the handler supports this, false otherwise
 	 */
 	public boolean supportsNonPush() {
 		return false;
@@ -113,13 +145,15 @@ public abstract class HttpPushProcessor extends HttpRequestProcessor {
 	 * @param client      Remote client
 	 * @param contentType Body content type
 	 * @throws IOException If processing fails
+	 * @return True if handled, false otherwise, return false to fall through to the
+	 *         next handler
 	 */
-	public abstract void process(String path, String method, RemoteClient client, String contentType)
+	public abstract boolean handleRequest(String path, String method, RemoteClient client, String contentType)
 			throws IOException;
 
 	/**
-	 * Creates a new instance of this HTTP processor
+	 * Creates a new instance of this HTTP handler
 	 */
-	public abstract HttpPushProcessor createNewInstance();
+	public abstract DynamicHttpPushHandler createNewInstance();
 
 }

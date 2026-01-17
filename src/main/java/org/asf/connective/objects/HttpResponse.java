@@ -8,6 +8,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+
+import org.asf.connective.RemoteClient;
 
 /**
  * 
@@ -29,16 +33,97 @@ public class HttpResponse extends HttpObject {
 
 	private String httpVersion;
 
+	private boolean statusAssigned = false;
 	private int statusCode = 200;
 	private String statusMessage = "OK";
+
+	private Consumer<RemoteClient> protocolSwitcher = null;
+	private BiConsumer<String, Consumer<RemoteClient>> protocolSwitchSetup;
+
+	/**
+	 * Sets up HTTP Upgrade with the given protocol, calling the protocol switcher
+	 * callback once the HTTP server exits. Note: you will be responsible for
+	 * closing the connection and managing it, the server will no longer recognize
+	 * the client once the protocol switch is completed. You are also responsible
+	 * for dealing with caching proxies, make sure to have proper anti-caching
+	 * headers assigned on client and server when using this function.
+	 * 
+	 * @param protocol                 Protocol name to switch to
+	 * @param protocolSwitcherCallback Protocol switcher callback to call with the
+	 *                                 client instance once the protocol switch is
+	 *                                 completed
+	 */
+	public HttpResponse switchProtocolsUpgrade(String protocol, Consumer<RemoteClient> protocolSwitcherCallback) {
+		setResponseStatus(101, "Switching Protocols");
+		addHeader("Upgrade", protocol);
+		addHeader("Connection", "Upgrade");
+		protocolSwitchSetup.accept(protocol, protocolSwitcherCallback);
+		return this;
+	}
+
+	/**
+	 * Sets up HTTP protocol switch through a HTTP CONNECT-like response, calling
+	 * the protocol switcher callback once the HTTP server exits. Note: you will be
+	 * responsible for closing the connection and managing it, the server will no
+	 * longer recognize the client once the protocol switch is completed. You are
+	 * also responsible for dealing with caching proxies, make sure to have proper
+	 * anti-caching headers assigned on client and server when using this function.
+	 * 
+	 * @param protocolSwitcherCallback Protocol switcher callback to call with the
+	 *                                 client instance once the protocol switch is
+	 *                                 completed
+	 */
+	public HttpResponse switchProtocolsConnect(Consumer<RemoteClient> protocolSwitcherCallback) {
+		setResponseStatus(200, "OK");
+		protocolSwitchSetup.accept("connect", protocolSwitcherCallback);
+		return this;
+	}
+
+	/**
+	 * Sets up HTTP protocol switch without setting status or headers, calling the
+	 * protocol switcher callback once the HTTP server exits. Note: you will be
+	 * responsible for closing the connection and managing it, the server will no
+	 * longer recognize the client once the protocol switch is completed. You are
+	 * also responsible for dealing with caching proxies, make sure to have proper
+	 * anti-caching headers assigned on client and server when using this function.
+	 * 
+	 * @param protocolSwitcherCallback Protocol switcher callback to call with the
+	 *                                 client instance once the protocol switch is
+	 *                                 completed
+	 */
+	public HttpResponse switchProtocolsRaw(Consumer<RemoteClient> protocolSwitcherCallback) {
+		protocolSwitchSetup.accept("raw", protocolSwitcherCallback);
+		return this;
+	}
+
+	/**
+	 * Checks if a protocol switch is scheduled
+	 * 
+	 * @return True if a protocol switch or http connect is scheduled, false
+	 *         otherwise
+	 */
+	public boolean protocolSwitchScheduled() {
+		return protocolSwitcher != null;
+	}
+
+	/**
+	 * Checks if the status code was assigned
+	 * 
+	 * @return True if assigned, false otherwise
+	 */
+	public boolean wasStatusAssigned() {
+		return statusAssigned;
+	}
 
 	/**
 	 * Creates a HttpResponse object instance
 	 * 
 	 * @param httpVersion HTTP version
 	 */
-	public HttpResponse(String httpVersion) throws IllegalArgumentException {
+	public HttpResponse(String httpVersion, BiConsumer<String, Consumer<RemoteClient>> protocolSwitchSetupCallback)
+			throws IllegalArgumentException {
 		this.httpVersion = httpVersion;
+		this.protocolSwitchSetup = protocolSwitchSetupCallback;
 	}
 
 	/**
@@ -72,6 +157,7 @@ public class HttpResponse extends HttpObject {
 	public HttpResponse setResponseStatus(int status, String message) {
 		this.statusCode = status;
 		this.statusMessage = message;
+		this.statusAssigned = true;
 		return this;
 	}
 
@@ -159,7 +245,7 @@ public class HttpResponse extends HttpObject {
 	 * Sets the body of the response, WARNING: the stream gets closed when the
 	 * response is sent.
 	 * 
-	 * @param body   Input stream
+	 * @param body Input stream
 	 */
 	public HttpResponse setContent(byte[] body) {
 		// Assign headers

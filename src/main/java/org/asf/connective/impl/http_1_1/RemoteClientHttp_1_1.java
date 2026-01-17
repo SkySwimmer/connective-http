@@ -9,11 +9,12 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Random;
 import java.util.TimeZone;
-import java.util.function.Function;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import javax.net.ssl.SSLException;
@@ -23,6 +24,8 @@ import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
 import org.asf.connective.io.IoUtil;
 import org.asf.connective.io.LengthTrackingStream;
+import org.asf.connective.io.PrependedBufferStream;
+import org.asf.connective.logger.ConnectiveLogMessage;
 import org.asf.connective.headers.HeaderCollection;
 import org.asf.connective.headers.HttpHeader;
 import org.asf.connective.tasks.AsyncTaskManager;
@@ -31,7 +34,7 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 
 	private ConnectiveHttpServer_1_1 server;
 	private Socket socket;
-	private InputStream in;
+	private PrependedBufferStream in;
 	private OutputStream out;
 
 	private String host;
@@ -40,6 +43,8 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 	protected int timeout = 5;
 	protected int maxRequests = 0;
 	protected int requestNumber = 0;
+
+	private Consumer<RemoteClient> protocolSwitcher;
 
 	protected boolean receiving = false;
 	private static Random rnd = new Random();
@@ -51,12 +56,11 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 	private String proxiedAddress = null;
 	private ArrayList<String> proxies = new ArrayList<String>();
 
-	protected RemoteClientHttp_1_1(Socket socket, ConnectiveHttpServer_1_1 server, InputStream in, OutputStream out,
-			Function<HttpRequest, HttpResponse> responseCreator) {
-		super(server, responseCreator);
+	protected RemoteClientHttp_1_1(Socket socket, ConnectiveHttpServer_1_1 server, InputStream in, OutputStream out) {
+		super(server);
 		this.server = server;
 		this.socket = socket;
-		this.in = in;
+		this.in = new PrependedBufferStream(in);
 		this.out = out;
 
 		// Retrieve address and port
@@ -92,7 +96,7 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 		while (!receiving && tsTc == tsT && rndTc == rndT) {
 			if (receiving || tsTc != tsT || rndTc != rndT || socket == null)
 				return;
-			if ((System.currentTimeMillis() - start) >= (timeout * 1000)) {
+			if ((System.currentTimeMillis() - start) >= (timeout * 1000) || !server.isRunning()) {
 				closeConnection();
 				break;
 			}
@@ -124,14 +128,14 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 
 	protected void receive() {
 		HttpRequest msg = null;
+		InputStream bodyStrm = null;
 		while (true) {
 			receiving = false;
 			try {
 				// Handle previous
 				try {
-					if (msg != null && msg.getBodyStream() != null
-							&& msg.getBodyStream() instanceof LengthTrackingStream) {
-						LengthTrackingStream strm = (LengthTrackingStream) msg.getBodyStream();
+					if (bodyStrm != null && bodyStrm instanceof LengthTrackingStream) {
+						LengthTrackingStream strm = (LengthTrackingStream) bodyStrm;
 						long read = strm.getBytesRead();
 						long len = msg.getBodyLength();
 						if (read < len) {
@@ -156,17 +160,25 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 				if (msg == null) {
 					// Malformed
 					// Send Bad Request response
-					HttpResponse resp = new HttpResponse("HTTP/1.1");
+					HttpResponse resp = new HttpResponse("HTTP/1.1", (ctx, protocolSwitcherInst) -> {
+					});
 					resp.setResponseStatus(400, "Bad request");
 					sendResponse(resp, null);
 					closeConnection();
 					return;
 				}
 
+				// Get stream
+				if (msg.hasHeader("Content-Length")) {
+					if (Long.parseLong(msg.getHeaderValue("Content-Length")) > 0)
+						bodyStrm = new LengthTrackingStream(in);
+				}
+
 				// Verify HTTP version
 				if (!msg.getHttpVersion().equals("HTTP/1.1")) {
 					// Send 505 response
-					HttpResponse resp = new HttpResponse(msg.getHttpVersion());
+					HttpResponse resp = new HttpResponse(msg.getHttpVersion(), (ctx, protocolSwitcherInst) -> {
+					});
 					resp.setResponseStatus(505, "HTTP Version Not Supported");
 					sendResponse(resp, null);
 					closeConnection();
@@ -184,7 +196,8 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 					return;
 				}
 
-				getLogger().error("Failed to process request from [" + addr + "]", ex);
+				getLogger().error(new ConnectiveLogMessage("handler", "Failed to process request due to an exception!",
+						ex, this));
 				if (msg != null) {
 					HttpResponse resp = createResponse(msg);
 					resp.setResponseStatus(500, "Internal server error");
@@ -197,6 +210,10 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 					return;
 				}
 			}
+
+			// Check state
+			if (!server.isRunning())
+				break; // Server close
 
 			// End if needed
 			if (requestNumber == 0)
@@ -386,16 +403,65 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 		}
 	}
 
-	protected String readStreamLine(InputStream strm) throws IOException {
-		String buffer = "";
-		while (true) {
-			char ch = (char) strm.read();
-			if (ch == (char) -1)
-				return null;
-			if (ch == '\n') {
-				return buffer;
-			} else if (ch != '\r') {
-				buffer += ch;
+	protected String readStreamLine(PrependedBufferStream strm) throws IOException {
+		// Read a number of bytes
+		byte[] content = new byte[20480];
+		int read = strm.read(content, 0, content.length);
+		if (read <= -1) {
+			// Failed
+			return null;
+		} else {
+			// Trim array
+			content = Arrays.copyOfRange(content, 0, read);
+
+			// Find newline
+			String newData = new String(content, "UTF-8");
+			if (newData.contains("\n")) {
+				// Found newline
+				String line = newData.substring(0, newData.indexOf("\n"));
+				int offset = line.length() + 1;
+				int returnLength = content.length - offset;
+				if (returnLength > 0) {
+					// Return
+					strm.returnToBuffer(Arrays.copyOfRange(content, offset, content.length));
+				}
+				return line.replace("\r", "");
+			} else {
+				// Read more
+				while (true) {
+					byte[] addition = new byte[20480];
+					read = strm.read(addition, 0, addition.length);
+					if (read <= -1) {
+						// Failed
+						strm.returnToBuffer(content);
+						return null;
+					}
+
+					// Trim
+					addition = Arrays.copyOfRange(addition, 0, read);
+
+					// Append
+					byte[] newContent = new byte[content.length + addition.length];
+					for (int i = 0; i < content.length; i++)
+						newContent[i] = content[i];
+					for (int i = content.length; i < newContent.length; i++)
+						newContent[i] = addition[i - content.length];
+					content = newContent;
+
+					// Find newline
+					newData = new String(content, "UTF-8");
+					if (newData.contains("\n")) {
+						// Found newline
+						String line = newData.substring(0, newData.indexOf("\n"));
+						int offset = line.length() + 1;
+						int returnLength = content.length - offset;
+						if (returnLength > 0) {
+							// Return
+							strm.returnToBuffer(Arrays.copyOfRange(content, offset, content.length));
+						}
+						return line.replace("\r", "");
+					}
+				}
 			}
 		}
 	}
@@ -418,7 +484,9 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 			response.addHeader("Transfer-Encoding", "chunked");
 
 		if (response.getHeaders().hasHeader("Connection")
-				&& response.getHeaders().getHeaderValue("Connection").equalsIgnoreCase("Keep-Alive")
+				&& Stream.of(response.getHeaders().getHeaderValues("Connection"))
+						.anyMatch(t -> Stream.of(t.replace(", ", ",").split(","))
+								.anyMatch(t2 -> t2.equalsIgnoreCase("Keep-Alive")))
 				&& (maxRequests == 0 || requestNumber < maxRequests)) {
 			if (response.getHeaders().hasHeader("Keep-Alive")) {
 				// Set values from existing header
@@ -449,7 +517,7 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 			} else if (timeout != 0 || maxRequests != 0)
 				response.addHeader("Keep-Alive", "timeout=" + timeout + ", max=" + maxRequests);
 		}
-		if (!response.hasHeader("Connection") && response.getResponseCode() != 101)
+		if (!response.hasHeader("Connection") && response.getResponseCode() != 101 && protocolSwitcher == null)
 			response.addHeader("Connection", "Closed");
 		else if (response.getResponseCode() == 101)
 			response.addHeader("Connection", "Upgrade");
@@ -542,9 +610,9 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 		}
 
 		// Handle upgrade
-		if (response.getResponseCode() == 101) {
+		if (protocolSwitcher != null) {
 			// Return so that the connection can be picked up by the upgrade implementation
-			response.addHeader("Upgraded", "True"); // Header to mark that the HTTP upgrade has been done
+			protocolSwitcher.accept(this);
 
 			// Remove client
 			synchronized (server.clients) {
@@ -555,7 +623,9 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 
 		// Handle keepalive
 		if ((!response.getHeaders().hasHeader("Connection")
-				|| !response.getHeaders().getHeaderValue("Connection").equalsIgnoreCase("Keep-Alive"))
+				|| !Stream.of(response.getHeaders().getHeaderValues("Connection"))
+						.anyMatch(t -> Stream.of(t.replace(", ", ",").split(","))
+								.anyMatch(t2 -> t2.equalsIgnoreCase("Keep-Alive"))))
 				|| (maxRequests != 0 && requestNumber >= maxRequests))
 			closeConnection();
 		else {
@@ -646,5 +716,10 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 	@Override
 	public String getRemoteProxiedClientAddress() {
 		return proxiedAddress;
+	}
+
+	@Override
+	protected HttpResponse createResponseInternal() {
+		return new HttpResponse("HTTP/1.1", (ctx, protocolSwitcherInst) -> protocolSwitcher = protocolSwitcherInst);
 	}
 }

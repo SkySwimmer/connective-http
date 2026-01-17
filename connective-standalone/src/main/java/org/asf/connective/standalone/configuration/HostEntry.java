@@ -22,9 +22,9 @@ import org.asf.connective.basicfile.providers.IDocumentPostProcessorProvider;
 import org.asf.connective.basicfile.providers.IFileAliasProvider;
 import org.asf.connective.basicfile.providers.IFileRestrictionProvider;
 import org.asf.connective.basicfile.util.BasicfileContentSource;
+import org.asf.connective.handlers.HttpRequestHandler;
 import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
-import org.asf.connective.processors.HttpRequestProcessor;
 import org.asf.connective.headers.HeaderCollection;
 import org.asf.connective.standalone.ConnectiveStandaloneMain;
 import org.asf.connective.standalone.configuration.context.ContextConfig;
@@ -43,7 +43,7 @@ public class HostEntry {
 
 	// Server settings
 	public ArrayList<ContentSource> contentSources = new ArrayList<ContentSource>();
-	public ArrayList<HttpRequestProcessor> processors = new ArrayList<HttpRequestProcessor>();
+	public ArrayList<HttpRequestHandler> handlers = new ArrayList<HttpRequestHandler>();
 	public HeaderCollection defaultHeaders = new HeaderCollection();
 	public String serverName;
 
@@ -219,8 +219,8 @@ public class HostEntry {
 		logger.info("Physical root set to " + root);
 
 		// Configure context
-		for (HttpRequestProcessor proc : contextConfig.processors) {
-			logger.info("Registered processor: " + proc.getClass().getTypeName());
+		for (HttpRequestHandler proc : contextConfig.handlers) {
+			logger.info("Registered handler: " + proc.getClass().getTypeName());
 			fac.registerProcessor(proc);
 		}
 		for (IFileAliasProvider alias : contextConfig.aliases) {
@@ -255,21 +255,21 @@ public class HostEntry {
 	}
 
 	/**
-	 * Configures server processors
+	 * Configures server handlers
 	 * 
-	 * @param processorConfigClosure Server processor configuration closure
+	 * @param handlerConfigClosure Server handler configuration closure
 	 */
-	public void Processors(Closure<?> processorConfigClosure) {
-		Processors(ProcessorConfig.fromClosure(processorConfigClosure));
+	public void Handlers(Closure<?> handlerConfigClosure) {
+		Handlers(HandlerConfig.fromClosure(handlerConfigClosure));
 	}
 
 	/**
-	 * Configures server processors
+	 * Configures server handlers
 	 * 
-	 * @param processorConfig Server processor configuration
+	 * @param handlerConfig Server handler configuration
 	 */
-	public void Processors(ProcessorConfig processorConfig) {
-		processors.addAll(processorConfig.processors);
+	public void Handlers(HandlerConfig handlerConfig) {
+		handlers.addAll(handlerConfig.handlers);
 	}
 
 	/**

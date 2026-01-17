@@ -2,14 +2,14 @@ package org.asf.connective.lambda;
 
 import java.io.IOException;
 
-public interface LambdaRequestProcessor {
+public interface LambdaRequestHandler {
 
 	/**
-	 * Called to process the request
+	 * Called to handle the request
 	 * 
 	 * @param ctx Request context
 	 * @throws IOException If an error occurs
 	 */
-	public void process(LambdaRequestContext ctx) throws IOException;
+	public void handle(LambdaRequestContext ctx) throws IOException;
 
 }

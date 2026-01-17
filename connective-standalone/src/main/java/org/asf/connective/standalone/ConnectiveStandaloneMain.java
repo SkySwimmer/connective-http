@@ -23,11 +23,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asf.connective.ConnectiveHttpServer;
 import org.asf.connective.ContentSource;
+import org.asf.connective.handlers.HttpRequestHandler;
 import org.asf.connective.headers.HttpHeader;
-import org.asf.connective.processors.HttpRequestProcessor;
 import org.asf.connective.standalone.configuration.ConfigExclude;
 import org.asf.connective.standalone.configuration.ConnectiveConfiguration;
 import org.asf.connective.standalone.configuration.HostEntry;
+import org.asf.connective.standalone.logger.Log4jManagerImpl;
 import org.asf.connective.standalone.modules.IConnectiveModule;
 import org.asf.connective.standalone.modules.IMavenRepositoryProvider;
 import org.asf.connective.standalone.modules.IModuleMavenDependencyProvider;
@@ -58,6 +59,9 @@ public class ConnectiveStandaloneMain {
 					ConnectiveStandaloneMain.class.getResource("/log4j2.xml").toString());
 		}
 		logger = LogManager.getLogger("CONNECTIVE STANDALONE");
+
+		// Assign
+		new Log4jManagerImpl().assignAsMain();
 
 		// Log init
 		logger.info("Preparing connective standalone server...");
@@ -346,10 +350,10 @@ public class ConnectiveStandaloneMain {
 					first = false;
 				}
 			}
-			logger.info("Adding processors...");
-			for (HttpRequestProcessor proc : host.processors) {
-				logger.info("Registering processor: " + proc.getClass().getTypeName());
-				server.registerProcessor(proc);
+			logger.info("Adding handlers...");
+			for (HttpRequestHandler proc : host.handlers) {
+				logger.info("Registering handler: " + proc.getClass().getTypeName());
+				server.registerHandler(proc);
 			}
 
 			// Run modules

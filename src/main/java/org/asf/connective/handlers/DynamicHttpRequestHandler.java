@@ -1,39 +1,67 @@
-package org.asf.connective.processors;
+package org.asf.connective.handlers;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
-import org.asf.connective.processors.HttpRequestProcessor;
 import org.asf.connective.ConnectiveHttpServer;
 import org.asf.connective.RemoteClient;
+import org.asf.connective.handlers.DynamicHttpRequestHandler;
 import org.asf.connective.headers.HeaderCollection;
 import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
 
 /**
  * 
- * HTTP Request Processor
+ * HTTP Request Handler with fallthrough
  * 
  * @author Sky Swimmer
+ * @since Connective 1.0.0.A17
  *
  */
-public abstract class HttpRequestProcessor {
+public abstract class DynamicHttpRequestHandler {
 
 	private ConnectiveHttpServer server;
 	private HttpResponse response;
 	private HttpRequest request;
 
 	/**
-	 * Instantiates a new processor with the server, request and response
+	 * Defines the HTTP methods this request handler supports
+	 * 
+	 * @return Array of HTTP methods supported by handler
+	 */
+	public String[] methods() {
+		return new String[] { "GET" };
+	}
+
+	/**
+	 * Called to verify the request processor against the HTTP resource prior to
+	 * running it, returning false will fall through to the following request
+	 * handler
+	 * 
+	 * @param path   Request path
+	 * @param method Request method
+	 * @param client Remote client
+	 * @throws IOException If processing fails
+	 * @return True if handled, false otherwise, return false to fall through to the
+	 *         next handler
+	 * @throws IOException
+	 */
+	public boolean match(String path, String method, RemoteClient client) throws IOException {
+		return true;
+	}
+
+	/**
+	 * Instantiates a new handler with the server, request and response
 	 * 
 	 * @param server   Server to use
 	 * @param request  HTTP request
 	 * @param response HTTP response
-	 * @return New HttpGetProcessor configured for processing
+	 * @return New DynamicHttpRequestHandler configured for processing
 	 */
-	public HttpRequestProcessor instantiate(ConnectiveHttpServer server, HttpRequest request, HttpResponse response) {
-		HttpRequestProcessor inst = createNewInstance();
+	public DynamicHttpRequestHandler instantiate(ConnectiveHttpServer server, HttpRequest request,
+			HttpResponse response) {
+		DynamicHttpRequestHandler inst = createNewInstance();
 		inst.server = server;
 		inst.response = response;
 		inst.request = request;
@@ -250,16 +278,16 @@ public abstract class HttpRequestProcessor {
 	}
 
 	/**
-	 * Retrieves the path this processor supports
+	 * Retrieves the path this handler supports
 	 * 
 	 * @return File path string
 	 */
 	public abstract String path();
 
 	/**
-	 * Checks if this processor supports child paths, false by default
+	 * Checks if this handler supports child paths, false by default
 	 * 
-	 * @return True if the processor supports this, false otherwise
+	 * @return True if the handler supports this, false otherwise
 	 */
 	public boolean supportsChildPaths() {
 		return false;
@@ -272,11 +300,13 @@ public abstract class HttpRequestProcessor {
 	 * @param method Request method
 	 * @param client Remote client
 	 * @throws IOException If processing fails
+	 * @return True if handled, false otherwise, return false to fall through to the
+	 *         next handler
 	 */
-	public abstract void process(String path, String method, RemoteClient client) throws IOException;
+	public abstract boolean handleRequest(String path, String method, RemoteClient client) throws IOException;
 
 	/**
-	 * Creates a new instance of this HTTP processor
+	 * Creates a new instance of this HTTP handler
 	 */
-	public abstract HttpRequestProcessor createNewInstance();
+	public abstract DynamicHttpRequestHandler createNewInstance();
 }

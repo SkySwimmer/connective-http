@@ -90,9 +90,7 @@ public class BasicfileContentSource extends ContentSource {
 		}
 
 		// Delegate to parent or fail if none is present
-		if (getParent() != null)
-			return getParent().process(path, request, response, client, server);
-		return false;
+		return runParent(path, request, response, client, server);
 	}
 
 	private void provideDataTo(Object obj, String virtualRoot, FileProviderContext context, DocumentProcessor proc,

@@ -20,6 +20,22 @@ public class LengthTrackingStream extends InputStream {
 	}
 
 	@Override
+	public int read(byte[] buffer) throws IOException {
+		int i = delegate.read(buffer);
+		if (i != -1)
+			read += i;
+		return i;
+	}
+
+	@Override
+	public int read(byte[] buffer, int start, int len) throws IOException {
+		int i = delegate.read(buffer, start, len);
+		if (i != -1)
+			read += i;
+		return i;
+	}
+
+	@Override
 	public int read() throws IOException {
 		int i = delegate.read();
 		if (i != -1)
@@ -34,6 +50,11 @@ public class LengthTrackingStream extends InputStream {
 	 */
 	public long getBytesRead() {
 		return read;
+	}
+	
+	@Override
+	public void close() throws IOException {
+		delegate.close(); 
 	}
 
 }

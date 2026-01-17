@@ -7,10 +7,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
-import java.util.function.Function;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.asf.connective.logger.ConnectiveLogMessage;
+import org.asf.connective.logger.ConnectiveLogger;
 import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
 
@@ -22,14 +21,13 @@ import org.asf.connective.objects.HttpResponse;
  *
  */
 public abstract class RemoteClient {
-	private Logger logger = LogManager.getLogger("connective-http");
+	private ConnectiveLogger logger;
 
 	private ConnectiveHttpServer server;
-	private Function<HttpRequest, HttpResponse> responseCreator;
 
-	protected RemoteClient(ConnectiveHttpServer server, Function<HttpRequest, HttpResponse> responseCreator) {
+	protected RemoteClient(ConnectiveHttpServer server) {
 		this.server = server;
-		this.responseCreator = responseCreator;
+		this.logger = server.getLogger().getManager().getLogger("client");
 	}
 
 	/**
@@ -76,7 +74,7 @@ public abstract class RemoteClient {
 	 * 
 	 * @return Logger instance
 	 */
-	protected Logger getLogger() {
+	public ConnectiveLogger getLogger() {
 		return logger;
 	}
 
@@ -90,47 +88,50 @@ public abstract class RemoteClient {
 		// Prepare response
 		HttpResponse resp = createResponse(request);
 		try {
-			// Compute address
-			String addr = getRemoteAddress();
-			if (isProxied()) {
-				// Update
-				if (!passedThroughAuthoritiveProxy())
-					addr = getRemoteProxiedClientAddress();
-
-				// Add proxy chain
-				for (String proxy : getProxyChain()) {
-					addr += " -> " + proxy;
+			// Go through handler layers
+			boolean run = true;
+			ConnectiveHttpServer.LayerInfo layer = server.layer;
+			while (layer != null) {
+				if (!layer.proc.handle(request.getRequestPath(), request, resp, this, server)) {
+					// Cancel handling
+					run = false;
+					break;
 				}
-
-				// Add warning if needed
-				if (!passedThroughAuthoritiveProxy())
-					addr += " (ALERT! detected non-authoritive proxy, using address " + getRemoteAddress() + ")";
+				layer = layer.parent;
 			}
 
-			// Set error if needed
-			if (!server.getContentSource().process(request.getRequestPath(), request, resp, this, server)) {
+			// Process if allowed
+			if (!run || !server.getContentSource().process(request.getRequestPath(), request, resp, this, server)) {
 				if (!request.getRequestMethod().equals("GET") && !request.getRequestMethod().equals("PUT")
 						&& !request.getRequestMethod().equals("DELETE") && !request.getRequestMethod().equals("PATCH")
 						&& !request.getRequestMethod().equals("POST") && !request.getRequestMethod().equals("HEAD")) {
 					resp.setResponseStatus(405, "Unsupported request");
-					logger.error(resp.getHttpVersion() + " " + request.getRequestMethod() + " "
-							+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
-							+ resp.getResponseMessage() + " [" + addr + "]");
+					logger.error(new ConnectiveLogMessage("handler",
+							resp.getHttpVersion() + " " + request.getRequestMethod() + " "
+									+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
+									+ resp.getResponseMessage(),
+							null, this));
 				} else {
 					resp.setResponseStatus(404, "Not found");
-					logger.error(resp.getHttpVersion() + " " + request.getRequestMethod() + " "
-							+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
-							+ resp.getResponseMessage() + " [" + addr + "]");
+					logger.error(new ConnectiveLogMessage("handler",
+							resp.getHttpVersion() + " " + request.getRequestMethod() + " "
+									+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
+									+ resp.getResponseMessage(),
+							null, this));
 				}
 			} else {
 				if (!resp.isSuccessResponseCode())
-					logger.error(resp.getHttpVersion() + " " + request.getRequestMethod() + " "
-							+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
-							+ resp.getResponseMessage() + " [" + addr + "]");
+					logger.error(new ConnectiveLogMessage("handler",
+							resp.getHttpVersion() + " " + request.getRequestMethod() + " "
+									+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
+									+ resp.getResponseMessage(),
+							null, this));
 				else
-					logger.info(resp.getHttpVersion() + " " + request.getRequestMethod() + " "
-							+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
-							+ resp.getResponseMessage() + " [" + addr + "]");
+					logger.info(new ConnectiveLogMessage("handler",
+							resp.getHttpVersion() + " " + request.getRequestMethod() + " "
+									+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
+									+ resp.getResponseMessage(),
+							null, this));
 			}
 
 			// Set body if missing
@@ -146,6 +147,10 @@ public abstract class RemoteClient {
 			dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
 			resp.addHeader("Date", dateFormat.format(new Date()));
 			postProcessResponse(resp, request);
+			if (!resp.wasStatusAssigned() && !resp.hasResponseBody() && resp.isSuccessResponseCode()) {
+				// Set 204
+				resp.setResponseStatus(204, "No Content");
+			}
 			sendResponse(resp, request);
 		} finally {
 			// If needed, we should close the response stream if its present to prevent
@@ -160,13 +165,20 @@ public abstract class RemoteClient {
 	}
 
 	/**
+	 * Called to create a HTTP response object
+	 * 
+	 * @return HttpResponse instance
+	 */
+	protected abstract HttpResponse createResponseInternal();
+
+	/**
 	 * Creates a HTTP response
 	 * 
 	 * @param request Request object
 	 * @return New HttpResponse instance
 	 */
 	protected HttpResponse createResponse(HttpRequest request) {
-		HttpResponse resp = responseCreator.apply(request);
+		HttpResponse resp = createResponseInternal();
 		resp.addHeader("Server", server.getServerName());
 		for (String name : server.getDefaultHeaders().getHeaderNames())
 			if (!resp.hasHeader(name))
