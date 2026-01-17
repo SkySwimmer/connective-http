@@ -116,6 +116,8 @@ public class CaseInsensitiveHttpHandlerSet extends HttpHandlerSet {
 
 					// Go up
 					pth2 = pth2.substring(0, pth2.lastIndexOf("/"));
+					if (pth2.isEmpty())
+						pth2 = "/";
 				}
 			}
 		}
@@ -149,6 +151,8 @@ public class CaseInsensitiveHttpHandlerSet extends HttpHandlerSet {
 
 					// Go up
 					pth2 = pth2.substring(0, pth2.lastIndexOf("/"));
+					if (pth2.isEmpty())
+						pth2 = "/";
 				}
 			}
 		}
