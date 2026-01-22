@@ -570,7 +570,7 @@ public class RemoteClientHttp_1_1 extends RemoteClient {
 				long tr = 0;
 				for (long i = 0; i < length; i += tr) {
 					// Prepare buffer
-					int bufLen = 1024 * 1024;
+					int bufLen = 20480;
 					if (bufLen > (length - i))
 						bufLen = (int) (length - i);
 
