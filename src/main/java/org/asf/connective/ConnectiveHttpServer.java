@@ -30,7 +30,7 @@ public abstract class ConnectiveHttpServer extends HttpHandlerSet {
 	/**
 	 * Version of the ConnectiveHTTP library
 	 */
-	public static final String CONNECTIVE_VERSION = "1.0.0.A18";
+	public static final String CONNECTIVE_VERSION = "1.0.0.A19";
 
 	static class LayerInfo {
 		public IHttpHandlerLayer proc;
