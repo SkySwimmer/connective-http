@@ -9,13 +9,27 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 
+import org.asf.connective.handlers.DynamicHttpPushHandler;
+import org.asf.connective.handlers.DynamicHttpRequestHandler;
 import org.asf.connective.handlers.HttpHandlerSet;
+import org.asf.connective.handlers.HttpPushHandler;
+import org.asf.connective.handlers.HttpRequestHandler;
 import org.asf.connective.headers.HeaderCollection;
 import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
+import org.asf.connective.impl.DelegatePushHandler;
+import org.asf.connective.impl.DelegateRequestHandler;
+import org.asf.connective.impl.DynamicDelegatePushHandler;
+import org.asf.connective.impl.DynamicDelegateRequestHandler;
 import org.asf.connective.impl.http_1_1.Http_1_1_Adapter;
 import org.asf.connective.impl.https_1_1.Https_1_1_Adapter;
 import org.asf.connective.io.IoUtil;
+import org.asf.connective.lambda.DynamicLambdaPushHandler;
+import org.asf.connective.lambda.DynamicLambdaRequestHandler;
+import org.asf.connective.lambda.LambdaPushHandler;
+import org.asf.connective.lambda.LambdaPushHandlerMatcher;
+import org.asf.connective.lambda.LambdaRequestHandler;
+import org.asf.connective.lambda.LambdaRequestHandlerMatcher;
 import org.asf.connective.logger.ConnectiveLogger;
 import org.asf.connective.logger.ConnectiveLoggerManager;
 
@@ -26,11 +40,11 @@ import org.asf.connective.logger.ConnectiveLoggerManager;
  * @author Sky Swimmer
  *
  */
-public abstract class ConnectiveHttpServer extends HttpHandlerSet {
+public abstract class ConnectiveHttpServer {
 	/**
 	 * Version of the ConnectiveHTTP library
 	 */
-	public static final String CONNECTIVE_VERSION = "1.0.0.A19";
+	public static final String CONNECTIVE_VERSION = "1.0.0.A20";
 
 	static class LayerInfo {
 		public IHttpHandlerLayer proc;
@@ -47,6 +61,8 @@ public abstract class ConnectiveHttpServer extends HttpHandlerSet {
 
 	private static ArrayList<IServerAdapterDefinition> adapters = new ArrayList<IServerAdapterDefinition>(
 			Arrays.asList(new IServerAdapterDefinition[] { new Http_1_1_Adapter(), new Https_1_1_Adapter() }));
+
+	private HttpHandlerSet handlerSet = new HttpHandlerSet();
 
 	public ConnectiveHttpServer() {
 		// Proxies
@@ -202,6 +218,328 @@ public abstract class ConnectiveHttpServer extends HttpHandlerSet {
 	public void setContentSource(ContentSource newSource) {
 		newSource.parent = contentSource;
 		contentSource = newSource;
+	}
+
+	/**
+	 * Assigns the default handler set used by the server, <b>note: does not copy
+	 * handlers of the current set</b>
+	 * 
+	 * @param set New HttpHandlerSet instance
+	 */
+	public void setHandlerSet(HttpHandlerSet set) {
+		this.handlerSet = set;
+	}
+
+	/**
+	 * Retrieves the default handler set used by the server
+	 * 
+	 * @return HttpHandlerSet instance
+	 */
+	public HttpHandlerSet getHandlerSet() {
+		return handlerSet;
+	}
+
+	/**
+	 * Registers a new request handler
+	 * 
+	 * @param path    The path to register to
+	 * @param handler Handler call
+	 * @param methods HTTP methods that are supported
+	 */
+	public void registerHandler(String path, LambdaRequestHandler handler, String... methods) {
+		registerHandler(path, handler, false, methods);
+	}
+
+	/**
+	 * Registers a new request handler
+	 * 
+	 * @param path    The path to register to
+	 * @param handler Handler call
+	 * @param methods HTTP methods that are supported
+	 */
+	public void registerHandler(String path, DynamicLambdaRequestHandler handler, String... methods) {
+		registerHandler(path, handler, false, methods);
+	}
+
+	/**
+	 * Registers a new request handler
+	 * 
+	 * @param path               The path to register to
+	 * @param handler            Handler call
+	 * @param supportsChildPaths True to supports child paths, false otherwise
+	 * @param methods            HTTP methods that are supported
+	 */
+	public void registerHandler(String path, LambdaRequestHandler handler, boolean supportsChildPaths,
+			String... methods) {
+		registerHandler(new DelegateRequestHandler(path, null, handler, supportsChildPaths, methods));
+	}
+
+	/**
+	 * Registers a new request handler
+	 * 
+	 * @param path               The path to register to
+	 * @param handler            Handler call
+	 * @param supportsChildPaths True to supports child paths, false otherwise
+	 */
+	public void registerHandler(String path, DynamicLambdaRequestHandler handler, boolean supportsChildPaths,
+			String... methods) {
+		registerHandler(new DynamicDelegateRequestHandler(path, null, handler, supportsChildPaths, methods));
+	}
+
+	/**
+	 * Registers a new request handler
+	 * 
+	 * @param path    The path to register to
+	 * @param matcher Matcher call
+	 * @param handler Handler call
+	 * @param methods HTTP methods that are supported
+	 */
+	public void registerHandler(String path, LambdaRequestHandlerMatcher matcher, LambdaRequestHandler handler,
+			String... methods) {
+		registerHandler(path, matcher, handler, false, methods);
+	}
+
+	/**
+	 * Registers a new request handler
+	 * 
+	 * @param path    The path to register to
+	 * @param matcher Matcher call
+	 * @param handler Handler call
+	 * @param methods HTTP methods that are supported
+	 */
+	public void registerHandler(String path, LambdaRequestHandlerMatcher matcher, DynamicLambdaRequestHandler handler,
+			String... methods) {
+		registerHandler(path, matcher, handler, false, methods);
+	}
+
+	/**
+	 * Registers a new request handler
+	 * 
+	 * @param path               The path to register to
+	 * @param matcher            Matcher call
+	 * @param handler            Handler call
+	 * @param supportsChildPaths True to supports child paths, false otherwise
+	 * @param methods            HTTP methods that are supported
+	 */
+	public void registerHandler(String path, LambdaRequestHandlerMatcher matcher, LambdaRequestHandler handler,
+			boolean supportsChildPaths, String... methods) {
+		registerHandler(new DelegateRequestHandler(path, matcher, handler, supportsChildPaths, methods));
+	}
+
+	/**
+	 * Registers a new request handler
+	 * 
+	 * @param path               The path to register to
+	 * @param matcher            Matcher call
+	 * @param handler            Handler call
+	 * @param supportsChildPaths True to supports child paths, false otherwise
+	 * @param methods            HTTP methods that are supported
+	 */
+	public void registerHandler(String path, LambdaRequestHandlerMatcher matcher, DynamicLambdaRequestHandler handler,
+			boolean supportsChildPaths, String... methods) {
+		registerHandler(new DynamicDelegateRequestHandler(path, matcher, handler, supportsChildPaths, methods));
+	}
+
+	/**
+	 * Registers a new push handler
+	 * 
+	 * @param path    The path to register to
+	 * @param handler Handler call
+	 * @param methods HTTP methods that are supported
+	 */
+	public void registerHandler(String path, LambdaPushHandler handler, String... methods) {
+		registerHandler(path, null, handler, false, methods);
+	}
+
+	/**
+	 * Registers a new push handler
+	 * 
+	 * @param path    The path to register to
+	 * @param handler Handler call
+	 * @param methods HTTP methods that are supported
+	 */
+	public void registerHandler(String path, DynamicLambdaPushHandler handler, String... methods) {
+		registerHandler(path, null, handler, false, methods);
+	}
+
+	/**
+	 * Registers a new push handler
+	 * 
+	 * @param path               The path to register to
+	 * @param handler            Handler call
+	 * @param supportsChildPaths True to supports child paths, false otherwise
+	 * @param methods            HTTP methods that are supported
+	 */
+	public void registerHandler(String path, LambdaPushHandler handler, boolean supportsChildPaths, String... methods) {
+		registerHandler(path, null, handler, supportsChildPaths, false, methods);
+	}
+
+	/**
+	 * Registers a new push handler
+	 * 
+	 * @param path               The path to register to
+	 * @param handler            Handler call
+	 * @param supportsChildPaths True to supports child paths, false otherwise
+	 * @param methods            HTTP methods that are supported
+	 */
+	public void registerHandler(String path, DynamicLambdaPushHandler handler, boolean supportsChildPaths,
+			String... methods) {
+		registerHandler(path, null, handler, supportsChildPaths, false, methods);
+	}
+
+	/**
+	 * Registers a new push handler
+	 * 
+	 * @param path               The path to register to
+	 * @param handler            Handler call
+	 * @param supportsChildPaths True to supports child paths, false otherwise
+	 * @param supportsNonPush    True to support non-upload requests, false
+	 *                           otherwise
+	 * @param methods            HTTP methods that are supported
+	 */
+	public void registerHandler(String path, LambdaPushHandler handler, boolean supportsChildPaths,
+			boolean supportsNonPush, String... methods) {
+		registerHandler(new DelegatePushHandler(path, null, handler, supportsChildPaths, supportsNonPush, methods));
+	}
+
+	/**
+	 * Registers a new push handler
+	 * 
+	 * @param path               The path to register to
+	 * @param handler            Handler call
+	 * @param supportsChildPaths True to supports child paths, false otherwise
+	 * @param supportsNonPush    True to support non-upload requests, false
+	 *                           otherwise
+	 * @param methods            HTTP methods that are supported
+	 */
+	public void registerHandler(String path, DynamicLambdaPushHandler handler, boolean supportsChildPaths,
+			boolean supportsNonPush, String... methods) {
+		registerHandler(
+				new DynamicDelegatePushHandler(path, null, handler, supportsChildPaths, supportsNonPush, methods));
+	}
+
+	/**
+	 * Registers a new push handler
+	 * 
+	 * @param path    The path to register to
+	 * @param matcher Matcher call
+	 * @param handler Handler call
+	 * @param methods HTTP methods that are supported
+	 */
+	public void registerHandler(String path, LambdaPushHandlerMatcher matcher, LambdaPushHandler handler,
+			String... methods) {
+		registerHandler(path, matcher, handler, false, methods);
+	}
+
+	/**
+	 * Registers a new push handler
+	 * 
+	 * @param path    The path to register to
+	 * @param matcher Matcher call
+	 * @param handler Handler call
+	 * @param methods HTTP methods that are supported
+	 */
+	public void registerHandler(String path, LambdaPushHandlerMatcher matcher, DynamicLambdaPushHandler handler,
+			String... methods) {
+		registerHandler(path, matcher, handler, false, methods);
+	}
+
+	/**
+	 * Registers a new push handler
+	 * 
+	 * @param path               The path to register to
+	 * @param matcher            Matcher call
+	 * @param handler            Handler call
+	 * @param supportsChildPaths True to supports child paths, false otherwise
+	 * @param methods            HTTP methods that are supported
+	 */
+	public void registerHandler(String path, LambdaPushHandlerMatcher matcher, LambdaPushHandler handler,
+			boolean supportsChildPaths, String... methods) {
+		registerHandler(path, matcher, handler, supportsChildPaths, false, methods);
+	}
+
+	/**
+	 * Registers a new push handler
+	 * 
+	 * @param path               The path to register to
+	 * @param matcher            Matcher call
+	 * @param handler            Handler call
+	 * @param supportsChildPaths True to supports child paths, false otherwise
+	 * @param methods            HTTP methods that are supported
+	 */
+	public void registerHandler(String path, LambdaPushHandlerMatcher matcher, DynamicLambdaPushHandler handler,
+			boolean supportsChildPaths, String... methods) {
+		registerHandler(path, matcher, handler, supportsChildPaths, false, methods);
+	}
+
+	/**
+	 * Registers a new push handler
+	 * 
+	 * @param path               The path to register to
+	 * @param matcher            Matcher call
+	 * @param handler            Handler call
+	 * @param supportsChildPaths True to supports child paths, false otherwise
+	 * @param supportsNonPush    True to support non-upload requests, false
+	 *                           otherwise
+	 * @param methods            HTTP methods that are supported
+	 */
+	public void registerHandler(String path, LambdaPushHandlerMatcher matcher, LambdaPushHandler handler,
+			boolean supportsChildPaths, boolean supportsNonPush, String... methods) {
+		registerHandler(new DelegatePushHandler(path, matcher, handler, supportsChildPaths, supportsNonPush, methods));
+	}
+
+	/**
+	 * Registers a new push handler
+	 * 
+	 * @param path               The path to register to
+	 * @param matcher            Matcher call
+	 * @param handler            Handler call
+	 * @param supportsChildPaths True to supports child paths, false otherwise
+	 * @param supportsNonPush    True to support non-upload requests, false
+	 *                           otherwise
+	 * @param methods            HTTP methods that are supported
+	 */
+	public void registerHandler(String path, LambdaPushHandlerMatcher matcher, DynamicLambdaPushHandler handler,
+			boolean supportsChildPaths, boolean supportsNonPush, String... methods) {
+		registerHandler(
+				new DynamicDelegatePushHandler(path, matcher, handler, supportsChildPaths, supportsNonPush, methods));
+	}
+
+	/**
+	 * Registers a new push handler
+	 * 
+	 * @param handler The handler implementation to register
+	 */
+	public void registerHandler(HttpPushHandler handler) {
+		registerHandler((DynamicHttpPushHandler) handler);
+	}
+
+	/**
+	 * Registers a new push handler
+	 * 
+	 * @param handler The handler implementation to register
+	 */
+	public void registerHandler(DynamicHttpPushHandler handler) {
+		// Register
+		registerHandler((DynamicHttpRequestHandler) handler);
+	}
+
+	/**
+	 * Registers a new request handler
+	 * 
+	 * @param handler The handler implementation to register.
+	 */
+	public void registerHandler(HttpRequestHandler handler) {
+		registerHandler((DynamicHttpRequestHandler) handler);
+	}
+
+	/**
+	 * Registers a new request handler
+	 * 
+	 * @param handler The handler implementation to register.
+	 */
+	public void registerHandler(DynamicHttpRequestHandler handler) {
+		handlerSet.registerHandler(handler);
 	}
 
 	/**

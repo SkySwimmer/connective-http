@@ -101,6 +101,7 @@ public abstract class RemoteClient {
 			}
 
 			// Process if allowed
+			boolean log = false;
 			if (!run || !server.getContentSource().process(request.getRequestPath(), request, resp, this, server)) {
 				if (!request.getRequestMethod().equals("GET") && !request.getRequestMethod().equals("PUT")
 						&& !request.getRequestMethod().equals("DELETE") && !request.getRequestMethod().equals("PATCH")
@@ -120,18 +121,7 @@ public abstract class RemoteClient {
 							null, this));
 				}
 			} else {
-				if (!resp.isSuccessResponseCode())
-					logger.error(new ConnectiveLogMessage("handler",
-							resp.getHttpVersion() + " " + request.getRequestMethod() + " "
-									+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
-									+ resp.getResponseMessage(),
-							null, this));
-				else
-					logger.info(new ConnectiveLogMessage("handler",
-							resp.getHttpVersion() + " " + request.getRequestMethod() + " "
-									+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
-									+ resp.getResponseMessage(),
-							null, this));
+				log = true;
 			}
 
 			// Set body if missing
@@ -150,6 +140,20 @@ public abstract class RemoteClient {
 			if (!resp.wasStatusAssigned() && !resp.hasResponseBody() && resp.isSuccessResponseCode()) {
 				// Set 204
 				resp.setResponseStatus(204, "No Content");
+			}
+			if (log) {
+				if (!resp.isSuccessResponseCode())
+					logger.error(new ConnectiveLogMessage("handler",
+							resp.getHttpVersion() + " " + request.getRequestMethod() + " "
+									+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
+									+ resp.getResponseMessage(),
+							null, this));
+				else
+					logger.info(new ConnectiveLogMessage("handler",
+							resp.getHttpVersion() + " " + request.getRequestMethod() + " "
+									+ request.getRawRequestResource() + " : " + resp.getResponseCode() + " "
+									+ resp.getResponseMessage(),
+							null, this));
 			}
 			sendResponse(resp, request);
 		} finally {
