@@ -1,3 +1,6 @@
+Ive lost my local todo list, so this is very outdated, but ill try to add things as i realize them
+
+
 Projects to make:
 connective-standalone: rewrite of the standalone server, new module loading etc
 Prism: load balancer server (protocol is called Crystal)
@@ -9,5 +12,8 @@ connective-cgi: cgi support
 
 TODO:
 connective-http:
+- builtin support for VHosts with fallback
+- support for byte range (partial file) requests
+
 - HTTP/2 support
 - HTTP/3 support
