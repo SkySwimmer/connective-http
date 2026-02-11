@@ -2,18 +2,18 @@ Ive lost my local todo list, so this is very outdated, but ill try to add things
 
 
 Projects to make:
-connective-standalone: rewrite of the standalone server, new module loading etc
-Prism: load balancer server (protocol is called Crystal)
-connective-security: security library implementing JWT and various tools as well as contextfile restrictions in jwt and basic auth
-jazzcode: rewrite of the jazzcode module with better support and security
-connective-websockets: websocket server implementation
-connective-cgi: cgi support
+ - connective-standalone: rewrite of the standalone server, new module loading etc
+ - orusn: load balancer server (protocol is called crystal)
+ - connective-security: security library implementing JWT and various tools as well as contextfile restrictions in jwt and basic auth
+ - jazzcode: rewrite of the jazzcode module with better support and security
+ - connective-websockets: websocket server implementation
+ - connective-cgi: cgi support
 
 
 TODO:
-connective-http:
-- builtin support for VHosts with fallback
-- support for byte range (partial file) requests
-
-- HTTP/2 support
-- HTTP/3 support
+ - connective-http:
+   - proper support for OPTIONS methods and CORS, with OptionsHandler interface, providing headers for options requests without running handlers, a server-wide, contentsource-specific and handler-specific OptionsHandler, with of course support for the lambda types
+   - builtin support for VHosts with fallback
+   - support for byte range (partial file) requests
+   - HTTP/2 support
+   - HTTP/3 support
