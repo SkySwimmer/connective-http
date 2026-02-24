@@ -12,6 +12,12 @@ Projects to make:
 
 TODO:
  - connective-http:
+   - make sure protocol switching is handled better
+     - make sure the server properly handles protocol switched clients, that it remembers the client handler
+     - make sure the protocol switcher can mark the client as closed
+     - make sure protocol switcher can handle a server stop event to disconnect the client
+     - make sure server stop gives clients a 30 second timer to cleanly stop and forces stop if taking too long
+     - make sure force quit fully closes upgraded clients
    - proper support for OPTIONS methods and CORS, with OptionsHandler interface, providing headers for options requests without running handlers, a server-wide, contentsource-specific and handler-specific OptionsHandler, with of course support for the lambda types
    - builtin support for VHosts with fallback
    - support for byte range (partial file) requests
