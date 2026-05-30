@@ -3,7 +3,7 @@ Ive lost my local todo list, so this is very outdated, but ill try to add things
 
 Projects to make:
  - connective-standalone: rewrite of the standalone server, new module loading etc
- - orusn: load balancer server (protocol is called crystal)
+ - prism: load balancer server (protocol is called crystal)
  - connective-security: security library implementing JWT and various tools as well as contextfile restrictions in jwt and basic auth
  - jazzcode: rewrite of the jazzcode module with better support and security
  - connective-websockets: websocket server implementation
