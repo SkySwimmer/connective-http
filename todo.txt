@@ -12,6 +12,8 @@ Projects to make:
 
 TODO:
  - connective-http:
+   - replace fallthrough processors with prehandler checks
+   - try to improve the design of handler management, using hashmaps where possible, and to reduce any overhead possible
    - make sure protocol switching is handled better
      - make sure the server properly handles protocol switched clients, that it remembers the client handler
      - make sure the protocol switcher can mark the client as closed
@@ -19,7 +21,7 @@ TODO:
      - make sure server stop gives clients a 30 second timer to cleanly stop and forces stop if taking too long
      - make sure force quit fully closes upgraded clients
    - proper support for OPTIONS methods and CORS, with OptionsHandler interface, providing headers for options requests without running handlers, a server-wide, contentsource-specific and handler-specific OptionsHandler, with of course support for the lambda types
-   - builtin support for VHosts with fallback
+   - builtin support for VHosts with fallback (make sure to support sharing the same vhost across multiple server listeners without causing resource issues)
    - support for byte range (partial file) requests
    - HTTP/2 support
    - HTTP/3 support
