@@ -25,3 +25,4 @@ TODO:
    - support for byte range (partial file) requests
    - HTTP/2 support
    - HTTP/3 support
+   - setup github actions to automatically build and release
