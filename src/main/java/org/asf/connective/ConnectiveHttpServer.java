@@ -46,6 +46,13 @@ public abstract class ConnectiveHttpServer {
 	 */
 	public static final String CONNECTIVE_VERSION = "1.0.0.A20";
 
+	/**
+	 * Number representing the API version of ConnectiveHTTP
+	 * 
+	 * @since Connective A20
+	 */
+	public static final int CONNECTIVE_API_VERSION = 20;
+
 	static class LayerInfo {
 		public IHttpHandlerLayer proc;
 		public LayerInfo parent;
